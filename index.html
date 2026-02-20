@@ -435,29 +435,33 @@
   // VIEWERS AO VIVO (YouTube Data API) - CORRIGIDO
   // =========================
   async function fetchConcurrentViewers(videoId){
-    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "" || YOUTUBE_API_KEY === "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU") return null;
 
-    const url =
-      `https://www.googleapis.com/youtube/v3/videos` +
-      `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+  if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "")
+    return null;
 
-    const res = await fetch(url);
+  const url =
+    `https://www.googleapis.com/youtube/v3/videos` +
+    `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
 
-    if(!res.ok){
-      let detail = "";
-      try{
-        const err = await res.json();
-        detail = err?.error?.message ? ` | ${err.error.message}` : "";
-      }catch(e){}
-      throw new Error(`API HTTP ${res.status}${detail}`);
-    }
+  const res = await fetch(url);
 
-    const data = await res.json();
-    const item = data.items && data.items[0];
-    const viewers = item?.liveStreamingDetails?.concurrentViewers;
-
-    return viewers ? Number(viewers) : 0; // se não estiver ao vivo -> 0
+  if(!res.ok){
+    let detail = "";
+    try{
+      const err = await res.json();
+      detail = err?.error?.message ? ` | ${err.error.message}` : "";
+    }catch(e){}
+    throw new Error(`API HTTP ${res.status}${detail}`);
   }
+
+  const data = await res.json();
+  const item = data.items && data.items[0];
+
+  const viewers = item?.liveStreamingDetails?.concurrentViewers;
+
+  // Se não estiver ao vivo, retorna 0
+  return viewers ? Number(viewers) : 0;
+}
 
   function formatViewers(n){
     if (n === null) return "👀 —";
