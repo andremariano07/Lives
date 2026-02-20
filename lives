@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Painel de Lives</title>
+
+<style>
+body {
+  margin: 0;
+  background: #111;
+  font-family: Arial, sans-serif;
+}
+
+#clock {
+  text-align: center;
+  color: #00bfff;
+  font-size: 28px;
+  font-weight: bold;
+  padding: 10px;
+}
+
+.container {
+  display: flex;
+  height: calc(100vh - 60px);
+  gap: 10px;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.live {
+  flex: 1;
+  border: 2px solid #00bfff;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+}
+
+.title {
+  text-align: center;
+  padding: 8px;
+  background: #00bfff;
+  color: black;
+  font-weight: bold;
+}
+
+iframe {
+  flex: 1;
+  border: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="clock">00:00:00</div>
+
+<div class="container">
+
+  <div class="live">
+    <div class="title">LIVE 1</div>
+    <iframe src="https://www.youtube.com/embed/N0lqE1yAduE" allowfullscreen></iframe>
+  </div>
+
+  <div class="live">
+    <div class="title">LIVE 2</div>
+    <iframe src="https://www.youtube.com/embed/w2wQeZ1L1Mo" allowfullscreen></iframe>
+  </div>
+
+</div>
+
+<script>
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').innerText = `${h}:${m}:${s}`;
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
+</body>
+</html>
