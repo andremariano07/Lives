@@ -705,7 +705,7 @@
   }
 
   // =========================
-  // MAPA HELIOS (com nome + velocidade FIXOS)
+  // MAPA HELIOS (com status + zoom seguro + labels)
   // =========================
   let map = null;
   let mapInited = false;
@@ -745,6 +745,9 @@
     map = L.map("map").setView([-7.9, -61.5], 9);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
+    // ✅ pedido: logo após criar o map
+    setTimeout(()=> map.invalidateSize(true), 150);
+
     // inicia loop
     refreshHelios();
     heliosTimer = setInterval(refreshHelios, HELIOS_REFRESH_MS);
@@ -757,13 +760,31 @@
   }
 
   async function refreshHelios(){
+    const status = document.getElementById("status");
     try{
       const res = await fetch(HELIOS_POS_URL, { cache:"no-store" });
-      if(!res.ok) return;
-      const data = await res.json();
-      if(!data.positions || !data.positions.length) return;
 
-      // atualiza cada participante
+      if(!res.ok){
+        status.innerText = `Helios: HTTP ${res.status}`;
+        return;
+      }
+
+      const data = await res.json();
+
+      if(!data.positions || !data.positions.length){
+        status.innerText = "Helios: sem posições no momento";
+        return;
+      }
+
+      // centraliza/ajusta zoom no primeiro retorno (se ainda estiver muito longe)
+      const first = data.positions[0];
+      if(first && map){
+        const z = map.getZoom();
+        if(z < 8){
+          map.setView([first.latitude, first.longitude], 10, { animate: true });
+        }
+      }
+
       data.positions.forEach(p=>{
         const pos = [p.latitude, p.longitude];
         const speedTxt = formatSpeedKmh(p.speed);
@@ -775,7 +796,6 @@
           </div>
         `;
 
-        // marker
         if(!userMarkers[p.userId]){
           userMarkers[p.userId] = L.marker(pos, { icon: blinkIcon }).addTo(map)
             .bindTooltip(labelHtml, {
@@ -788,7 +808,6 @@
           userPaths[p.userId] = [pos];
         } else {
           userMarkers[p.userId].setLatLng(pos);
-
           const tt = userMarkers[p.userId].getTooltip();
           if(tt) tt.setContent(labelHtml);
 
@@ -805,14 +824,11 @@
         }
       });
 
-      // centraliza no primeiro da lista (ajuste se quiser)
-      const first = data.positions[0];
-      if(first && map){
-        map.panTo([first.latitude, first.longitude], { animate:true, duration:0.5 });
-      }
-
-    }catch(e){
-      // silencioso
+      status.innerText = "Helios OK ✅";
+    } catch(e){
+      // Aqui vai aparecer se for CORS
+      status.innerText = `Helios erro: ${e.message}`;
+      console.error("Helios fetch erro:", e);
     }
   }
 
