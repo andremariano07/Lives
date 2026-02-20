@@ -546,33 +546,33 @@
   // VIEWERS + LIVE STATUS (YouTube Data API)
   // =========================
   async function fetchLiveInfo(videoId){
-    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "" || YOUTUBE_API_KEY === "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU") return null;
+  if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "") return null;
 
-    const url =
-      `https://www.googleapis.com/youtube/v3/videos` +
-      `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+  const url =
+    `https://www.googleapis.com/youtube/v3/videos` +
+    `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
 
-    const res = await fetch(url);
-    if(!res.ok){
-      let detail = "";
-      try{
-        const err = await res.json();
-        detail = err?.error?.message ? ` | ${err.error.message}` : "";
-      }catch(e){}
-      throw new Error(`API HTTP ${res.status}${detail}`);
-    }
-
-    const data = await res.json();
-    const item = data.items && data.items[0];
-    const d = item?.liveStreamingDetails;
-
-    const concurrent = d?.concurrentViewers ? Number(d.concurrentViewers) : 0;
-    const started = !!d?.actualStartTime;
-    const ended = !!d?.actualEndTime;
-    const isLive = started && !ended;
-
-    return { viewers: concurrent, isLive };
+  const res = await fetch(url);
+  if(!res.ok){
+    let detail = "";
+    try{
+      const err = await res.json();
+      detail = err?.error?.message ? ` | ${err.error.message}` : "";
+    }catch(e){}
+    throw new Error(`API HTTP ${res.status}${detail}`);
   }
+
+  const data = await res.json();
+  const item = data.items && data.items[0];
+  const d = item?.liveStreamingDetails;
+
+  const concurrent = d?.concurrentViewers ? Number(d.concurrentViewers) : 0;
+  const started = !!d?.actualStartTime;
+  const ended = !!d?.actualEndTime;
+  const isLive = started && !ended;
+
+  return { viewers: concurrent, isLive };
+}
 
   function formatViewers(n){
     if (n === null) return "👀 —";
