@@ -6,25 +6,41 @@
 <title>Painel de Lives</title>
 
 <style>
-  body { margin:0; background:#111; font-family:Arial, sans-serif; color:#fff; }
+  :root{
+    --bg:#111;
+    --panel:#000;
+    --accent:#00bfff;
+    --text:#fff;
+    --muted:#bbb;
+    --border:#222;
+    --radius:12px;
+  }
+
+  body { margin:0; background:var(--bg); font-family:Arial, sans-serif; color:var(--text); }
 
   #topbar{
     display:flex; justify-content:space-between; align-items:center;
-    padding:10px 14px; border-bottom:1px solid #222; gap:12px;
+    padding:10px 14px; border-bottom:1px solid var(--border); gap:12px;
   }
-  #clock{ color:#00bfff; font-size:22px; font-weight:bold; white-space:nowrap; }
-  #status { color:#bbb; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #leftTop { display:flex; align-items:center; gap:10px; min-width:0; }
+  #status { color:var(--muted); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #clock{ color:var(--accent); font-size:22px; font-weight:bold; white-space:nowrap; }
 
-  /* NOVO: botão */
-  #toggleChat{
-    background:#00bfff;
+  .btn{
+    background:var(--accent);
     color:#000;
     border:none;
-    border-radius:8px;
-    padding:6px 10px;
-    font-weight:700;
+    border-radius:10px;
+    padding:7px 10px;
+    font-weight:800;
     cursor:pointer;
     white-space:nowrap;
+  }
+  .btn.secondary{
+    background:#1f1f1f;
+    color:var(--text);
+    border:1px solid #2b2b2b;
+    font-weight:700;
   }
 
   .grid{
@@ -37,10 +53,10 @@
   }
 
   .panel{
-    border:2px solid #00bfff;
-    border-radius:12px;
+    border:2px solid var(--accent);
+    border-radius:var(--radius);
     overflow:hidden;
-    background:#000;
+    background:var(--panel);
     display:flex;
     flex-direction:column;
     min-height: 0;
@@ -51,7 +67,7 @@
     justify-content:space-between;
     align-items:center;
     gap:10px;
-    background:#00bfff;
+    background:var(--accent);
     color:#000;
     font-weight:bold;
     padding:8px 10px;
@@ -61,13 +77,32 @@
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;
+    flex:1;
   }
 
-  .title .viewers{
+  .titleRight{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+  }
+
+  .pill{
     background: rgba(0,0,0,0.15);
     padding:4px 8px;
     border-radius:999px;
-    font-weight:700;
+    font-weight:800;
+    white-space:nowrap;
+  }
+
+  .miniBtn{
+    background: rgba(0,0,0,0.20);
+    border:1px solid rgba(0,0,0,0.12);
+    color:#000;
+    padding:4px 8px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:900;
     white-space:nowrap;
   }
 
@@ -80,53 +115,154 @@
 
   iframe{ width:100%; height:100%; border:0; }
 
-  /* =========================
-     NOVO: esconder/mostrar chat
-     ========================= */
-  .chats-hidden .content{
-    grid-template-columns: 1fr; /* fica só o vídeo ocupando tudo */
+  /* esconder chat por painel */
+  .chat-hidden .content{ grid-template-columns: 1fr; }
+  .chat-hidden iframe.chat{ display:none; }
+
+  /* ===== Modal ===== */
+  .modalOverlay{
+    position:fixed;
+    inset:0;
+    background: rgba(0,0,0,0.65);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:18px;
+    z-index:9999;
   }
-  .chats-hidden iframe.chat{
-    display:none;
+  .modal{
+    width:min(720px, 100%);
+    background:#0b0b0b;
+    border:1px solid #2a2a2a;
+    border-radius:18px;
+    box-shadow: 0 16px 50px rgba(0,0,0,0.6);
+    overflow:hidden;
+  }
+  .modalHeader{
+    padding:14px 16px;
+    background: #0f0f0f;
+    border-bottom:1px solid #222;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+  }
+  .modalHeader h2{
+    margin:0;
+    font-size:16px;
+    color:#fff;
+  }
+  .modalBody{
+    padding:16px;
+    display:grid;
+    gap:12px;
+  }
+  .field label{
+    display:block;
+    font-size:13px;
+    color:#cfcfcf;
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid #2a2a2a;
+    background:#141414;
+    color:#fff;
+    box-sizing:border-box;
+    outline:none;
+  }
+  .hint{
+    color:#9c9c9c;
+    font-size:12px;
+    line-height:1.35;
+  }
+  .modalFooter{
+    padding:14px 16px;
+    border-top:1px solid #222;
+    display:flex;
+    justify-content:flex-end;
+    gap:10px;
+  }
+
+  /* mobile */
+  @media (max-width: 900px){
+    .grid{ grid-template-columns: 1fr; height:auto; min-height: calc(100vh - 58px); }
+    .panel{ min-height: 60vh; }
   }
 </style>
 </head>
 
 <body>
   <div id="topbar">
-    <div id="status">Carregando…</div>
-
-    <!-- NOVO: botão -->
-    <button id="toggleChat" type="button">Ocultar chat</button>
-
+    <div id="leftTop">
+      <button class="btn secondary" id="editLinksBtn" type="button">Editar links</button>
+      <div id="status">Carregando…</div>
+    </div>
     <div id="clock">00:00:00</div>
   </div>
 
-  <!-- NOVO: id para alternar classe -->
-  <div class="grid" id="gridRoot">
+  <div class="grid">
     <!-- LIVE 1 -->
-    <div class="panel">
+    <div class="panel" id="panel1">
       <div class="title">
         <div class="name" id="t1">LIVE 1</div>
-        <div class="viewers" id="v1">👀 —</div>
+        <div class="titleRight">
+          <div class="pill" id="v1">👀 —</div>
+          <button class="miniBtn" id="toggleChat1" type="button">Ocultar chat</button>
+        </div>
       </div>
       <div class="content">
         <iframe id="vid1" allowfullscreen></iframe>
-        <!-- NOVO: classe chat -->
         <iframe id="chat1" class="chat"></iframe>
       </div>
     </div>
 
     <!-- LIVE 2 -->
-    <div class="panel">
+    <div class="panel" id="panel2">
       <div class="title">
         <div class="name" id="t2">LIVE 2</div>
-        <div class="viewers" id="v2">👀 —</div>
+        <div class="titleRight">
+          <div class="pill" id="v2">👀 —</div>
+          <button class="miniBtn" id="toggleChat2" type="button">Ocultar chat</button>
+        </div>
       </div>
       <div class="content">
         <iframe id="vid2" allowfullscreen></iframe>
-        <!-- NOVO: classe chat -->
         <iframe id="chat2" class="chat"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal (popup) -->
+  <div class="modalOverlay" id="modalOverlay" style="display:none;">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modalHeader">
+        <h2 id="modalTitle">Configurar lives</h2>
+        <button class="btn secondary" id="closeModalBtn" type="button">Fechar</button>
+      </div>
+
+      <div class="modalBody">
+        <div class="field">
+          <label for="liveUrl1">Link da Live 1 (YouTube)</label>
+          <input id="liveUrl1" placeholder="https://www.youtube.com/watch?v=..." />
+        </div>
+
+        <div class="field">
+          <label for="liveUrl2">Link da Live 2 (YouTube)</label>
+          <input id="liveUrl2" placeholder="https://www.youtube.com/watch?v=..." />
+        </div>
+
+        <div class="hint">
+          Dica: você pode colar link de <b>watch?v=</b> ou <b>youtu.be/</b>.  
+          Os links ficam salvos neste navegador (localStorage).
+        </div>
+      </div>
+
+      <div class="modalFooter">
+        <button class="btn secondary" id="clearSavedBtn" type="button">Limpar salvos</button>
+        <button class="btn" id="saveLinksBtn" type="button">Salvar e carregar</button>
       </div>
     </div>
   </div>
@@ -135,18 +271,15 @@
   // =========================
   // CONFIG
   // =========================
-  const VIDEO_1 = "N0lqE1yAduE";
-  const VIDEO_2 = "w2wQeZ1L1Mo";
 
-  // ⚠️ Cole aqui a NOVA chave (a que você criar depois de revogar a antiga)
+  // ⚠️ Cole sua API KEY AQUI (e restrinja no Google Cloud para andremariano07.github.io)
   const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
 
-  // Para chat embutido:
-  // - servidor local: "localhost"
-  // - GitHub Pages: "seuusuario.github.io"
+  // GitHub Pages (domínio do Pages)
   const EMBED_DOMAIN = "andremariano07.github.io";
 
   const REFRESH_EVERY_MS = 15000; // 15s
+  const LS_KEY = "painelLives.links.v1";
 
   // =========================
   // RELÓGIO
@@ -161,33 +294,163 @@
   setInterval(updateClock, 1000); updateClock();
 
   // =========================
-  // NOVO: BOTÃO MOSTRAR/OCULTAR CHAT
+  // UTIL: extrair ID do vídeo do YouTube
+  // suporta:
+  // - https://www.youtube.com/watch?v=ID
+  // - https://youtu.be/ID
+  // - https://www.youtube.com/live/ID
+  // - já colar o próprio ID
   // =========================
-  const gridRoot = document.getElementById("gridRoot");
-  const toggleBtn = document.getElementById("toggleChat");
+  function extractYouTubeId(input){
+    if(!input) return null;
+    const s = input.trim();
 
-  function setChatHidden(hidden){
-    gridRoot.classList.toggle("chats-hidden", hidden);
-    toggleBtn.textContent = hidden ? "Mostrar chat" : "Ocultar chat";
-    toggleBtn.setAttribute("aria-pressed", hidden ? "true" : "false");
+    // se já parece um ID (11 chars, letras/números/_/-)
+    if(/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+
+    try{
+      const u = new URL(s);
+      // watch?v=
+      const v = u.searchParams.get("v");
+      if(v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+
+      // youtu.be/ID
+      if(u.hostname.includes("youtu.be")){
+        const id = u.pathname.replace("/","").split("/")[0];
+        if(/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
+      }
+
+      // /live/ID ou /embed/ID ou /shorts/ID
+      const parts = u.pathname.split("/").filter(Boolean);
+      const maybe = parts[1] ? parts[1] : parts[0];
+      // casos: /live/ID -> parts[0]=live parts[1]=ID
+      // /embed/ID -> parts[0]=embed parts[1]=ID
+      // /shorts/ID -> parts[0]=shorts parts[1]=ID
+      if(parts.length >= 2 && ["live","embed","shorts"].includes(parts[0])){
+        const id = parts[1];
+        if(/^[a-zA-Z0-9_-]{11}$/.test(id)) return id;
+      }
+    }catch(e){
+      // não era URL válida
+    }
+    return null;
   }
 
-  // inicia com chat visível
-  setChatHidden(false);
+  // =========================
+  // MODAL (popup)
+  // =========================
+  const modalOverlay = document.getElementById("modalOverlay");
+  const liveUrl1Input = document.getElementById("liveUrl1");
+  const liveUrl2Input = document.getElementById("liveUrl2");
 
-  toggleBtn.addEventListener("click", () => {
-    const hiddenNow = !gridRoot.classList.contains("chats-hidden");
-    setChatHidden(hiddenNow);
+  function openModal(){
+    // preencher com salvo (se existir)
+    const saved = loadSavedLinks();
+    if(saved){
+      liveUrl1Input.value = saved.url1 || "";
+      liveUrl2Input.value = saved.url2 || "";
+    }
+    modalOverlay.style.display = "flex";
+    setTimeout(()=> liveUrl1Input.focus(), 50);
+  }
+
+  function closeModal(){
+    modalOverlay.style.display = "none";
+  }
+
+  document.getElementById("editLinksBtn").addEventListener("click", openModal);
+  document.getElementById("closeModalBtn").addEventListener("click", closeModal);
+
+  modalOverlay.addEventListener("click", (e)=>{
+    if(e.target === modalOverlay) closeModal();
+  });
+
+  function saveLinks(url1, url2){
+    localStorage.setItem(LS_KEY, JSON.stringify({ url1, url2 }));
+  }
+
+  function loadSavedLinks(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(!raw) return null;
+      return JSON.parse(raw);
+    }catch(e){
+      return null;
+    }
+  }
+
+  function clearSavedLinks(){
+    localStorage.removeItem(LS_KEY);
+  }
+
+  document.getElementById("clearSavedBtn").addEventListener("click", ()=>{
+    clearSavedLinks();
+    liveUrl1Input.value = "";
+    liveUrl2Input.value = "";
+  });
+
+  document.getElementById("saveLinksBtn").addEventListener("click", ()=>{
+    const url1 = liveUrl1Input.value.trim();
+    const url2 = liveUrl2Input.value.trim();
+
+    const id1 = extractYouTubeId(url1);
+    const id2 = extractYouTubeId(url2);
+
+    if(!id1 || !id2){
+      alert("Cole links válidos do YouTube para as duas lives (ou o ID do vídeo com 11 caracteres).");
+      return;
+    }
+
+    saveLinks(url1, url2);
+    setVideoIds(id1, id2);
+    closeModal();
+    refreshAll(); // atualiza títulos/viewers
   });
 
   // =========================
-  // IFRAMES
+  // CHAT TOGGLE (um por live)
   // =========================
-  document.getElementById("vid1").src = `https://www.youtube.com/embed/${VIDEO_1}`;
-  document.getElementById("vid2").src = `https://www.youtube.com/embed/${VIDEO_2}`;
+  function setChatHidden(panelEl, btnEl, hidden){
+    panelEl.classList.toggle("chat-hidden", hidden);
+    btnEl.textContent = hidden ? "Mostrar chat" : "Ocultar chat";
+    btnEl.setAttribute("aria-pressed", hidden ? "true" : "false");
+  }
 
-  document.getElementById("chat1").src = `https://www.youtube.com/live_chat?v=${VIDEO_1}&embed_domain=${EMBED_DOMAIN}`;
-  document.getElementById("chat2").src = `https://www.youtube.com/live_chat?v=${VIDEO_2}&embed_domain=${EMBED_DOMAIN}`;
+  const panel1 = document.getElementById("panel1");
+  const panel2 = document.getElementById("panel2");
+  const toggleChat1 = document.getElementById("toggleChat1");
+  const toggleChat2 = document.getElementById("toggleChat2");
+
+  // inicia chat visível
+  setChatHidden(panel1, toggleChat1, false);
+  setChatHidden(panel2, toggleChat2, false);
+
+  toggleChat1.addEventListener("click", ()=>{
+    const hidden = !panel1.classList.contains("chat-hidden");
+    setChatHidden(panel1, toggleChat1, hidden);
+  });
+
+  toggleChat2.addEventListener("click", ()=>{
+    const hidden = !panel2.classList.contains("chat-hidden");
+    setChatHidden(panel2, toggleChat2, hidden);
+  });
+
+  // =========================
+  // IFRAMES / IDs dinâmicos
+  // =========================
+  let VIDEO_1 = "N0lqE1yAduE";
+  let VIDEO_2 = "w2wQeZ1L1Mo";
+
+  function setVideoIds(id1, id2){
+    VIDEO_1 = id1;
+    VIDEO_2 = id2;
+
+    document.getElementById("vid1").src = `https://www.youtube.com/embed/${VIDEO_1}`;
+    document.getElementById("vid2").src = `https://www.youtube.com/embed/${VIDEO_2}`;
+
+    document.getElementById("chat1").src = `https://www.youtube.com/live_chat?v=${VIDEO_1}&embed_domain=${EMBED_DOMAIN}`;
+    document.getElementById("chat2").src = `https://www.youtube.com/live_chat?v=${VIDEO_2}&embed_domain=${EMBED_DOMAIN}`;
+  }
 
   // =========================
   // TÍTULO AUTOMÁTICO (oEmbed)
@@ -204,7 +467,7 @@
   // VIEWERS AO VIVO (YouTube Data API)
   // =========================
   async function fetchConcurrentViewers(videoId){
-    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.includes("COLE_SUA_NOVA_KEY_AQUI")) return null;
+    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.includes("AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU")) return null;
 
     const url =
       `https://www.googleapis.com/youtube/v3/videos` +
@@ -245,7 +508,7 @@
       document.getElementById("v2").innerText = formatViewers(v2);
 
       if(v1 === null || v2 === null){
-        status.innerText = "Títulos OK. Cole sua YouTube API key para ver viewers ao vivo.";
+        status.innerText = "Títulos OK. (Para viewers ao vivo, cole sua API key no código.)";
       } else {
         status.innerText = "Atualizado ✅";
       }
@@ -254,8 +517,25 @@
     }
   }
 
-  refreshAll();
-  setInterval(refreshAll, REFRESH_EVERY_MS);
+  // =========================
+  // INIT
+  // =========================
+  const saved = loadSavedLinks();
+  if(saved && saved.url1 && saved.url2){
+    const id1 = extractYouTubeId(saved.url1);
+    const id2 = extractYouTubeId(saved.url2);
+    if(id1 && id2){
+      setVideoIds(id1, id2);
+      refreshAll();
+      setInterval(refreshAll, REFRESH_EVERY_MS);
+    }else{
+      openModal();
+    }
+  }else{
+    // primeira vez: abre o popup
+    openModal();
+  }
+
 </script>
 </body>
 </html>
