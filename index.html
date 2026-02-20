@@ -96,6 +96,7 @@
     align-items:center;
     gap:8px;
     flex-shrink:0;
+    flex-wrap:wrap;
   }
 
   .pill{
@@ -309,7 +310,11 @@
     <div class="panel" style="grid-column:1/-1;">
       <div class="title">
         <div class="name">🗺 Expedição Transamazonica</div>
+
+        <!-- ✅ 1) Pills adicionadas no cabeçalho do mapa -->
         <div class="titleRight">
+          <div class="pill" id="cityNow">📍 —</div>
+          <div class="pill" id="weatherNow">🌤 —</div>
           <div class="pill" id="distTotal">📏 0,0 km</div>
         </div>
       </div>
@@ -366,6 +371,11 @@
   const HELIOS_POS_URL = "https://httpsnome-seu-workerseuusuarioworkersdev.andredeeds.workers.dev/?slug=transamazonica-2026";
   const HELIOS_REFRESH_MS = 10000;
   const HELIOS_MIN_MOVE_KM = 0.01; // 10m
+
+  // ✅ 2) Configs do clima (perto do HELIOS...)
+  const WEATHER_REFRESH_MS = 180000; // 3 min (pra não abusar)
+  let lastWeatherAt = 0;
+  let lastWeatherKey = ""; // evita refazer se não mudou muito
 
   // =========================
   // RELÓGIO
@@ -762,6 +772,81 @@
     return `${kmh.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km/h`;
   }
 
+  // ✅ 3) Funções do clima/cidade (antes do refreshHelios)
+  function roundCoord(x){ return Math.round(Number(x) * 100) / 100; } // 2 casas (~1km)
+  function weatherCodeToText(code){
+    const map = {
+      0:"Céu limpo",
+      1:"Poucas nuvens", 2:"Parcial nublado", 3:"Nublado",
+      45:"Neblina", 48:"Neblina",
+      51:"Garoa fraca", 53:"Garoa", 55:"Garoa forte",
+      61:"Chuva fraca", 63:"Chuva", 65:"Chuva forte",
+      71:"Neve fraca", 73:"Neve", 75:"Neve forte",
+      80:"Pancadas fracas", 81:"Pancadas", 82:"Pancadas fortes",
+      95:"Trovoadas", 96:"Trovoadas granizo", 99:"Trovoadas granizo"
+    };
+    return map[code] || `Tempo (${code})`;
+  }
+
+  // Cidade/Estado pelo GPS (Nominatim)
+  async function fetchCityFromLatLng(lat, lon){
+    const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+    const res = await fetch(url, { cache:"no-store" });
+    if(!res.ok) throw new Error("Falha ao buscar cidade");
+    const data = await res.json();
+    const a = data.address || {};
+    const city = a.city || a.town || a.village || a.municipality || a.county || "—";
+    const state = a.state || a.region || "";
+    return state ? `${city} - ${state}` : city;
+  }
+
+  // Clima atual pelo GPS (Open-Meteo)
+  async function fetchWeatherNow(lat, lon){
+    const url =
+      `https://api.open-meteo.com/v1/forecast` +
+      `?latitude=${encodeURIComponent(lat)}` +
+      `&longitude=${encodeURIComponent(lon)}` +
+      `&current=temperature_2m,weather_code,wind_speed_10m` +
+      `&timezone=auto`;
+    const res = await fetch(url, { cache:"no-store" });
+    if(!res.ok) throw new Error("Falha ao buscar clima");
+    const data = await res.json();
+    const c = data.current;
+    if(!c) throw new Error("Clima indisponível");
+    return {
+      temp: c.temperature_2m,
+      code: c.weather_code,
+      wind: c.wind_speed_10m
+    };
+  }
+
+  async function refreshWeatherByPos(lat, lon){
+    const now = Date.now();
+    if(now - lastWeatherAt < WEATHER_REFRESH_MS) return;
+
+    // evita bater API se mudou muito pouco
+    const key = `${roundCoord(lat)},${roundCoord(lon)}`;
+    if(key === lastWeatherKey && (now - lastWeatherAt) < WEATHER_REFRESH_MS) return;
+
+    lastWeatherAt = now;
+    lastWeatherKey = key;
+
+    try{
+      const [city, w] = await Promise.all([
+        fetchCityFromLatLng(lat, lon),
+        fetchWeatherNow(lat, lon)
+      ]);
+
+      document.getElementById("cityNow").innerText = `📍 ${city}`;
+      document.getElementById("weatherNow").innerText =
+        `🌤 ${Math.round(w.temp)}°C • ${weatherCodeToText(w.code)} • 💨 ${Math.round(w.wind)} km/h`;
+    }catch(e){
+      // se falhar, não quebra o mapa
+      document.getElementById("cityNow").innerText = `📍 —`;
+      document.getElementById("weatherNow").innerText = `🌤 —`;
+    }
+  }
+
   async function refreshHelios(){
     const status = document.getElementById("status");
     try{
@@ -786,6 +871,11 @@
         if(z < 8){
           map.setView([first.latitude, first.longitude], 10, { animate: true });
         }
+      }
+
+      // ✅ 4) Chamar clima/cidade baseado na posição do “primeiro”
+      if(first){
+        refreshWeatherByPos(first.latitude, first.longitude);
       }
 
       data.positions.forEach(p=>{
@@ -842,19 +932,8 @@
         }
       });
 
-      // ✅ 3) (Opcional) Centralizar o mapa para mostrar TODO o trajeto
-      // (deixe comentado pra não ficar "pulando")
-      /*
-      const allLines = Object.values(userPolylines);
-      if(allLines.length){
-        const group = L.featureGroup(allLines);
-        map.fitBounds(group.getBounds().pad(0.2));
-      }
-      */
-
       status.innerText = "Helios OK ✅";
     } catch(e){
-      // Aqui vai aparecer se for CORS
       status.innerText = `Helios erro: ${e.message}`;
       console.error("Helios fetch erro:", e);
     }
