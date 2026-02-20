@@ -718,8 +718,11 @@
     iconAnchor: [9,9]
   });
 
+  // ✅ 1) Estados adicionados (markers + paths + polylines + cores)
   const userMarkers = {};     // userId -> marker
   const userPaths = {};       // userId -> array de [lat,lng]
+  const userPolylines = {};   // userId -> polyline (trajeto)
+  const pathColors = ["#00bfff","#00ff88","#ffcc00","#ff4d4d","#b084ff","#ff7ad9","#66ccff","#ffa866"];
   let totalKm = 0;
 
   function haversineKm(a, b){
@@ -796,6 +799,7 @@
           </div>
         `;
 
+        // ✅ 2) Substituição: cria polyline quando o usuário aparece + atualiza quando move
         if(!userMarkers[p.userId]){
           userMarkers[p.userId] = L.marker(pos, { icon: blinkIcon }).addTo(map)
             .bindTooltip(labelHtml, {
@@ -806,6 +810,15 @@
             });
 
           userPaths[p.userId] = [pos];
+
+          // ✅ cria a linha do trajeto (começa com 1 ponto)
+          const color = pathColors[Object.keys(userPolylines).length % pathColors.length];
+          userPolylines[p.userId] = L.polyline(userPaths[p.userId], {
+            weight: 4,
+            opacity: 0.9,
+            color
+          }).addTo(map);
+
         } else {
           userMarkers[p.userId].setLatLng(pos);
           const tt = userMarkers[p.userId].getTooltip();
@@ -818,11 +831,26 @@
           if(!last || movedKm > HELIOS_MIN_MOVE_KM){
             path.push(pos);
             userPaths[p.userId] = path;
+
+            // ✅ atualiza a linha do trajeto
+            const line = userPolylines[p.userId];
+            if(line) line.setLatLngs(path);
+
             totalKm += movedKm;
             setDistUI();
           }
         }
       });
+
+      // ✅ 3) (Opcional) Centralizar o mapa para mostrar TODO o trajeto
+      // (deixe comentado pra não ficar "pulando")
+      /*
+      const allLines = Object.values(userPolylines);
+      if(allLines.length){
+        const group = L.featureGroup(allLines);
+        map.fitBounds(group.getBounds().pad(0.2));
+      }
+      */
 
       status.innerText = "Helios OK ✅";
     } catch(e){
