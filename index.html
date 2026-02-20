@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel de Lives</title>
 
+<!-- Leaflet (Mapa) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
 <style>
   :root{
     --bg:#111;
@@ -41,6 +45,13 @@
     color:var(--text);
     border:1px solid #2b2b2b;
     font-weight:700;
+  }
+
+  /* Tabs */
+  .tabBtn.active{
+    background: var(--accent);
+    color:#000;
+    border-color: transparent;
   }
 
   .grid{
@@ -197,24 +208,40 @@
   }
 
   /* 📺 TV MODE */
-  body.tv #topbar{
-    padding:8px 10px;
-  }
-  body.tv #status{
-    display:none;
-  }
+  body.tv #topbar{ padding:8px 10px; }
+  body.tv #status{ display:none; }
   body.tv .grid{
     padding:8px;
     gap:8px;
     height: calc(100vh - 52px);
   }
-  body.tv .title{
-    padding:10px 12px;
-    font-size:15px;
+  body.tv .title{ padding:10px 12px; font-size:15px; }
+  body.tv .pill, body.tv .miniBtn, body.tv .liveBadge{ padding:8px 12px; font-size:14px; }
+
+  /* ===== MAPA: marcador piscando + label permanente ===== */
+  .blinkDot{
+    width:18px;
+    height:18px;
+    border-radius:50%;
+    background:#00ff88;
+    border:3px solid #002b18;
+    box-shadow:0 0 0 0 rgba(0,255,136,.7);
+    animation:pulseBlink 1.2s infinite;
   }
-  body.tv .pill, body.tv .miniBtn, body.tv .liveBadge{
-    padding:8px 12px;
-    font-size:14px;
+  @keyframes pulseBlink{
+    0%{box-shadow:0 0 0 0 rgba(0,255,136,.6); transform:scale(1)}
+    70%{box-shadow:0 0 0 18px rgba(0,255,136,0); transform:scale(1.08)}
+    100%{box-shadow:0 0 0 0 rgba(0,255,136,0); transform:scale(1)}
+  }
+
+  .leaflet-tooltip.permaLabel{
+    background: rgba(0,0,0,0.75);
+    border:1px solid var(--accent);
+    color:#fff;
+    font-weight:800;
+    padding:4px 8px;
+    border-radius:8px;
+    box-shadow:0 0 8px rgba(0,191,255,.35);
   }
 
   @media (max-width: 900px){
@@ -229,14 +256,21 @@
   <div id="topbar">
     <div id="leftTop">
       <button class="btn secondary" id="editLinksBtn" type="button">Editar links</button>
+
+      <!-- Tabs -->
+      <button class="btn secondary tabBtn active" data-tab="lives" type="button">🎥 Lives</button>
+      <button class="btn secondary tabBtn" data-tab="mapa" type="button">🗺 Localização</button>
+
       <button class="btn secondary" id="tvBtn" type="button">Modo TV</button>
       <button class="btn secondary" id="soundBtn" type="button">Som: OFF</button>
+
       <div id="status">Carregando…</div>
     </div>
     <div id="clock">00:00:00</div>
   </div>
 
-  <div class="grid">
+  <!-- TAB LIVES -->
+  <div id="tab-lives" class="grid">
     <!-- LIVE 1 -->
     <div class="panel" id="panel1">
       <div class="title">
@@ -267,6 +301,19 @@
         <iframe id="vid2" allowfullscreen></iframe>
         <iframe id="chat2" class="chat"></iframe>
       </div>
+    </div>
+  </div>
+
+  <!-- TAB MAPA -->
+  <div id="tab-mapa" class="grid" style="display:none;">
+    <div class="panel" style="grid-column:1/-1;">
+      <div class="title">
+        <div class="name">🗺 Expedição (Helios)</div>
+        <div class="titleRight">
+          <div class="pill" id="distTotal">📏 0,0 km</div>
+        </div>
+      </div>
+      <div id="map" style="width:100%;height:70vh;"></div>
     </div>
   </div>
 
@@ -305,15 +352,20 @@
   // =========================
   // CONFIG
   // =========================
-  const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU"; // <-- Cole sua key aqui (no SEU arquivo)
+  const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
   const EMBED_DOMAIN = "andremariano07.github.io";
   const REFRESH_EVERY_MS = 15000;
   const LS_KEY = "painelLives.links.v1";
 
   // Alertas
-  const ALERT_ON_GO_LIVE = true;     // som quando entra AO VIVO
-  const ALERT_VIEWERS_JUMP = 50;     // som se subir +50 viewers de uma vez (ajuste)
-  const ALERT_COOLDOWN_MS = 8000;    // evita som em loop
+  const ALERT_ON_GO_LIVE = true;
+  const ALERT_VIEWERS_JUMP = 50;
+  const ALERT_COOLDOWN_MS = 8000;
+
+  // Helios
+  const HELIOS_POS_URL = "https://helios.ratonet.com.br/api/v1/helios/positions?slug=transamazonica-2026";
+  const HELIOS_REFRESH_MS = 10000;
+  const HELIOS_MIN_MOVE_KM = 0.01; // 10m
 
   // =========================
   // RELÓGIO
@@ -328,6 +380,30 @@
   setInterval(updateClock, 1000); updateClock();
 
   // =========================
+  // TABS (Lives / Localização)
+  // =========================
+  const tabBtns = document.querySelectorAll(".tabBtn");
+  const tabLives = document.getElementById("tab-lives");
+  const tabMapa  = document.getElementById("tab-mapa");
+
+  function setActiveTab(name){
+    tabBtns.forEach(b=>{
+      b.classList.toggle("active", b.dataset.tab === name);
+    });
+    tabLives.style.display = (name === "lives") ? "grid" : "none";
+    tabMapa.style.display  = (name === "mapa") ? "grid"  : "none";
+
+    if(name === "mapa"){
+      initMapOnce();
+      setTimeout(()=>{ if(map) map.invalidateSize(true); }, 120);
+    }
+  }
+
+  tabBtns.forEach(btn=>{
+    btn.addEventListener("click", ()=> setActiveTab(btn.dataset.tab));
+  });
+
+  // =========================
   // MODO TV (toggle + fullscreen)
   // =========================
   const tvBtn = document.getElementById("tvBtn");
@@ -338,16 +414,13 @@
     const on = document.body.classList.contains("tv");
     tvBtn.textContent = on ? "Sair TV" : "Modo TV";
 
-    // tenta entrar/sair de fullscreen (pode falhar se o navegador bloquear)
     try{
       if(on && !isFullscreen()){
         await document.documentElement.requestFullscreen();
       }else if(!on && isFullscreen()){
         await document.exitFullscreen();
       }
-    }catch(e){
-      // sem stress: modo TV visual continua mesmo sem fullscreen
-    }
+    }catch(e){}
   }
   tvBtn.addEventListener("click", toggleTV);
 
@@ -389,8 +462,6 @@
     const now = Date.now();
     if(now - lastAlertAt < ALERT_COOLDOWN_MS) return;
     lastAlertAt = now;
-
-    // “triiiim” simples
     beep(880, 0.10);
     setTimeout(()=>beep(1175, 0.10), 140);
     setTimeout(()=>beep(880, 0.14), 280);
@@ -400,7 +471,6 @@
     soundEnabled = !soundEnabled;
     soundBtn.textContent = soundEnabled ? "Som: ON" : "Som: OFF";
     if(soundEnabled){
-      // cria contexto já no clique
       ensureAudio();
       beep(880, 0.08);
     }
@@ -546,33 +616,33 @@
   // VIEWERS + LIVE STATUS (YouTube Data API)
   // =========================
   async function fetchLiveInfo(videoId){
-  if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "") return null;
+    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "") return null;
 
-  const url =
-    `https://www.googleapis.com/youtube/v3/videos` +
-    `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+    const url =
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
 
-  const res = await fetch(url);
-  if(!res.ok){
-    let detail = "";
-    try{
-      const err = await res.json();
-      detail = err?.error?.message ? ` | ${err.error.message}` : "";
-    }catch(e){}
-    throw new Error(`API HTTP ${res.status}${detail}`);
+    const res = await fetch(url);
+    if(!res.ok){
+      let detail = "";
+      try{
+        const err = await res.json();
+        detail = err?.error?.message ? ` | ${err.error.message}` : "";
+      }catch(e){}
+      throw new Error(`API HTTP ${res.status}${detail}`);
+    }
+
+    const data = await res.json();
+    const item = data.items && data.items[0];
+    const d = item?.liveStreamingDetails;
+
+    const concurrent = d?.concurrentViewers ? Number(d.concurrentViewers) : 0;
+    const started = !!d?.actualStartTime;
+    const ended = !!d?.actualEndTime;
+    const isLive = started && !ended;
+
+    return { viewers: concurrent, isLive };
   }
-
-  const data = await res.json();
-  const item = data.items && data.items[0];
-  const d = item?.liveStreamingDetails;
-
-  const concurrent = d?.concurrentViewers ? Number(d.concurrentViewers) : 0;
-  const started = !!d?.actualStartTime;
-  const ended = !!d?.actualEndTime;
-  const isLive = started && !ended;
-
-  return { viewers: concurrent, isLive };
-}
 
   function formatViewers(n){
     if (n === null) return "👀 —";
@@ -585,27 +655,18 @@
   }
 
   // estados anteriores pra alerta
-  let prev = {
-    live1:false, live2:false,
-    v1:0, v2:0
-  };
+  let prev = { live1:false, live2:false, v1:0, v2:0 };
 
   async function refreshAll(){
     const status = document.getElementById("status");
     try{
       status.innerText = "Atualizando…";
 
-      const [title1, title2] = await Promise.all([
-        fetchTitle(VIDEO_1),
-        fetchTitle(VIDEO_2)
-      ]);
+      const [title1, title2] = await Promise.all([ fetchTitle(VIDEO_1), fetchTitle(VIDEO_2) ]);
       document.getElementById("t1").innerText = title1;
       document.getElementById("t2").innerText = title2;
 
-      const [info1, info2] = await Promise.all([
-        fetchLiveInfo(VIDEO_1),
-        fetchLiveInfo(VIDEO_2)
-      ]);
+      const [info1, info2] = await Promise.all([ fetchLiveInfo(VIDEO_1), fetchLiveInfo(VIDEO_2) ]);
 
       if(info1 === null || info2 === null){
         document.getElementById("v1").innerText = "👀 —";
@@ -616,13 +677,11 @@
         return;
       }
 
-      // aplicar UI
       document.getElementById("v1").innerText = formatViewers(info1.viewers);
       document.getElementById("v2").innerText = formatViewers(info2.viewers);
       setLiveBadge(1, info1.isLive);
       setLiveBadge(2, info2.isLive);
 
-      // alertas
       if(soundEnabled){
         if(ALERT_ON_GO_LIVE){
           if(!prev.live1 && info1.isLive) alertSound();
@@ -634,7 +693,6 @@
         }
       }
 
-      // atualizar prev
       prev.live1 = info1.isLive;
       prev.live2 = info2.isLive;
       prev.v1 = info1.viewers;
@@ -643,6 +701,118 @@
       status.innerText = "Atualizado ✅";
     }catch(e){
       status.innerText = `Erro: ${e.message}`;
+    }
+  }
+
+  // =========================
+  // MAPA HELIOS (com nome + velocidade FIXOS)
+  // =========================
+  let map = null;
+  let mapInited = false;
+  let heliosTimer = null;
+
+  const blinkIcon = L.divIcon({
+    className: "",
+    html: `<div class="blinkDot"></div>`,
+    iconSize: [18,18],
+    iconAnchor: [9,9]
+  });
+
+  const userMarkers = {};     // userId -> marker
+  const userPaths = {};       // userId -> array de [lat,lng]
+  let totalKm = 0;
+
+  function haversineKm(a, b){
+    const R = 6371;
+    const toRad = x => x * Math.PI/180;
+    const dLat = toRad(b[0] - a[0]);
+    const dLon = toRad(b[1] - a[1]);
+    const lat1 = toRad(a[0]);
+    const lat2 = toRad(b[0]);
+    const s = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+
+  function setDistUI(){
+    document.getElementById("distTotal").innerText =
+      `📏 ${totalKm.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`;
+  }
+
+  function initMapOnce(){
+    if(mapInited) return;
+    mapInited = true;
+
+    map = L.map("map").setView([-7.9, -61.5], 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+
+    // inicia loop
+    refreshHelios();
+    heliosTimer = setInterval(refreshHelios, HELIOS_REFRESH_MS);
+  }
+
+  function formatSpeedKmh(speed){
+    // no Helios parece m/s -> km/h
+    const kmh = (Number(speed || 0) * 3.6);
+    return `${kmh.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km/h`;
+  }
+
+  async function refreshHelios(){
+    try{
+      const res = await fetch(HELIOS_POS_URL, { cache:"no-store" });
+      if(!res.ok) return;
+      const data = await res.json();
+      if(!data.positions || !data.positions.length) return;
+
+      // atualiza cada participante
+      data.positions.forEach(p=>{
+        const pos = [p.latitude, p.longitude];
+        const speedTxt = formatSpeedKmh(p.speed);
+
+        const labelHtml = `
+          <div>
+            👤 ${p.userName}<br>
+            🚗 ${speedTxt}
+          </div>
+        `;
+
+        // marker
+        if(!userMarkers[p.userId]){
+          userMarkers[p.userId] = L.marker(pos, { icon: blinkIcon }).addTo(map)
+            .bindTooltip(labelHtml, {
+              permanent: true,
+              direction: "top",
+              offset: [0, -15],
+              className: "permaLabel"
+            });
+
+          userPaths[p.userId] = [pos];
+        } else {
+          userMarkers[p.userId].setLatLng(pos);
+
+          const tt = userMarkers[p.userId].getTooltip();
+          if(tt) tt.setContent(labelHtml);
+
+          const path = userPaths[p.userId] || [];
+          const last = path[path.length - 1];
+          const movedKm = last ? haversineKm(last, pos) : 0;
+
+          if(!last || movedKm > HELIOS_MIN_MOVE_KM){
+            path.push(pos);
+            userPaths[p.userId] = path;
+            totalKm += movedKm;
+            setDistUI();
+          }
+        }
+      });
+
+      // centraliza no primeiro da lista (ajuste se quiser)
+      const first = data.positions[0];
+      if(first && map){
+        map.panTo([first.latitude, first.longitude], { animate:true, duration:0.5 });
+      }
+
+    }catch(e){
+      // silencioso
     }
   }
 
@@ -663,6 +833,7 @@
   }else{
     openModal();
   }
+
 </script>
 </body>
 </html>
