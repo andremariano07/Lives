@@ -22,8 +22,8 @@
     display:flex; justify-content:space-between; align-items:center;
     padding:10px 14px; border-bottom:1px solid var(--border); gap:12px;
   }
-  #leftTop { display:flex; align-items:center; gap:10px; min-width:0; }
-  #status { color:var(--muted); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #leftTop { display:flex; align-items:center; gap:10px; min-width:0; flex-wrap:wrap; }
+  #status { color:var(--muted); font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 55vw; }
   #clock{ color:var(--accent); font-size:22px; font-weight:bold; white-space:nowrap; }
 
   .btn{
@@ -87,7 +87,6 @@
     flex-shrink:0;
   }
 
-  /* pill do viewers */
   .pill{
     background: rgba(0,0,0,0.25);
     padding:6px 10px;
@@ -98,7 +97,6 @@
     text-align:center;
   }
 
-  /* botão de chat (agora com texto branco) */
   .miniBtn{
     background: rgba(0,0,0,0.35);
     border:1px solid rgba(0,0,0,0.20);
@@ -110,16 +108,41 @@
     white-space:nowrap;
   }
 
+  /* 🔴 AO VIVO badge */
+  .liveBadge{
+    display:none;
+    align-items:center;
+    gap:6px;
+    padding:6px 10px;
+    border-radius:999px;
+    background: rgba(0,0,0,0.30);
+    color:#fff;
+    font-weight:900;
+    white-space:nowrap;
+    border:1px solid rgba(0,0,0,0.20);
+  }
+  .liveBadge .dot{
+    width:10px; height:10px;
+    border-radius:50%;
+    background:#ff2b2b;
+    box-shadow: 0 0 0 0 rgba(255,43,43,0.7);
+    animation: pulse 1.2s infinite;
+  }
+  @keyframes pulse{
+    0% { box-shadow: 0 0 0 0 rgba(255,43,43,0.65); }
+    70% { box-shadow: 0 0 0 10px rgba(255,43,43,0.0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,43,43,0.0); }
+  }
+
   .content{
     display:grid;
-    grid-template-columns: 2fr 1fr; /* vídeo maior, chat menor */
+    grid-template-columns: 2fr 1fr;
     flex:1;
     min-height:0;
   }
 
   iframe{ width:100%; height:100%; border:0; }
 
-  /* esconder chat por painel */
   .chat-hidden .content{ grid-template-columns: 1fr; }
   .chat-hidden iframe.chat{ display:none; }
 
@@ -151,22 +174,9 @@
     align-items:center;
     gap:10px;
   }
-  .modalHeader h2{
-    margin:0;
-    font-size:16px;
-    color:#fff;
-  }
-  .modalBody{
-    padding:16px;
-    display:grid;
-    gap:12px;
-  }
-  .field label{
-    display:block;
-    font-size:13px;
-    color:#cfcfcf;
-    margin-bottom:6px;
-  }
+  .modalHeader h2{ margin:0; font-size:16px; color:#fff; }
+  .modalBody{ padding:16px; display:grid; gap:12px; }
+  .field label{ display:block; font-size:13px; color:#cfcfcf; margin-bottom:6px; }
   .field input{
     width:100%;
     padding:10px 12px;
@@ -177,11 +187,7 @@
     box-sizing:border-box;
     outline:none;
   }
-  .hint{
-    color:#9c9c9c;
-    font-size:12px;
-    line-height:1.35;
-  }
+  .hint{ color:#9c9c9c; font-size:12px; line-height:1.35; }
   .modalFooter{
     padding:14px 16px;
     border-top:1px solid #222;
@@ -190,10 +196,31 @@
     gap:10px;
   }
 
-  /* mobile */
+  /* 📺 TV MODE */
+  body.tv #topbar{
+    padding:8px 10px;
+  }
+  body.tv #status{
+    display:none;
+  }
+  body.tv .grid{
+    padding:8px;
+    gap:8px;
+    height: calc(100vh - 52px);
+  }
+  body.tv .title{
+    padding:10px 12px;
+    font-size:15px;
+  }
+  body.tv .pill, body.tv .miniBtn, body.tv .liveBadge{
+    padding:8px 12px;
+    font-size:14px;
+  }
+
   @media (max-width: 900px){
     .grid{ grid-template-columns: 1fr; height:auto; min-height: calc(100vh - 58px); }
     .panel{ min-height: 60vh; }
+    #status{ max-width: 70vw; }
   }
 </style>
 </head>
@@ -202,6 +229,8 @@
   <div id="topbar">
     <div id="leftTop">
       <button class="btn secondary" id="editLinksBtn" type="button">Editar links</button>
+      <button class="btn secondary" id="tvBtn" type="button">Modo TV</button>
+      <button class="btn secondary" id="soundBtn" type="button">Som: OFF</button>
       <div id="status">Carregando…</div>
     </div>
     <div id="clock">00:00:00</div>
@@ -213,6 +242,7 @@
       <div class="title">
         <div class="name" id="t1">LIVE 1</div>
         <div class="titleRight">
+          <div class="liveBadge" id="live1Badge"><span class="dot"></span>AO VIVO</div>
           <div class="pill" id="v1">👀 —</div>
           <button class="miniBtn" id="toggleChat1" type="button">Ocultar chat</button>
         </div>
@@ -228,6 +258,7 @@
       <div class="title">
         <div class="name" id="t2">LIVE 2</div>
         <div class="titleRight">
+          <div class="liveBadge" id="live2Badge"><span class="dot"></span>AO VIVO</div>
           <div class="pill" id="v2">👀 —</div>
           <button class="miniBtn" id="toggleChat2" type="button">Ocultar chat</button>
         </div>
@@ -274,10 +305,15 @@
   // =========================
   // CONFIG
   // =========================
-  const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU"; // <-- Cole SUA key aqui no seu arquivo
+  const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU"; // <-- Cole sua key aqui (no SEU arquivo)
   const EMBED_DOMAIN = "andremariano07.github.io";
   const REFRESH_EVERY_MS = 15000;
   const LS_KEY = "painelLives.links.v1";
+
+  // Alertas
+  const ALERT_ON_GO_LIVE = true;     // som quando entra AO VIVO
+  const ALERT_VIEWERS_JUMP = 50;     // som se subir +50 viewers de uma vez (ajuste)
+  const ALERT_COOLDOWN_MS = 8000;    // evita som em loop
 
   // =========================
   // RELÓGIO
@@ -290,6 +326,85 @@
     document.getElementById('clock').innerText = `${h}:${m}:${s}`;
   }
   setInterval(updateClock, 1000); updateClock();
+
+  // =========================
+  // MODO TV (toggle + fullscreen)
+  // =========================
+  const tvBtn = document.getElementById("tvBtn");
+  function isFullscreen(){ return !!document.fullscreenElement; }
+
+  async function toggleTV(){
+    document.body.classList.toggle("tv");
+    const on = document.body.classList.contains("tv");
+    tvBtn.textContent = on ? "Sair TV" : "Modo TV";
+
+    // tenta entrar/sair de fullscreen (pode falhar se o navegador bloquear)
+    try{
+      if(on && !isFullscreen()){
+        await document.documentElement.requestFullscreen();
+      }else if(!on && isFullscreen()){
+        await document.exitFullscreen();
+      }
+    }catch(e){
+      // sem stress: modo TV visual continua mesmo sem fullscreen
+    }
+  }
+  tvBtn.addEventListener("click", toggleTV);
+
+  // =========================
+  // SOM (WebAudio - precisa clique)
+  // =========================
+  const soundBtn = document.getElementById("soundBtn");
+  let soundEnabled = false;
+  let audioCtx = null;
+  let lastAlertAt = 0;
+
+  function ensureAudio(){
+    if(audioCtx) return;
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new Ctx();
+  }
+
+  function beep(freq=880, dur=0.12){
+    if(!soundEnabled) return;
+    ensureAudio();
+    if(audioCtx.state === "suspended") audioCtx.resume();
+
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.type = "sine";
+    o.frequency.value = freq;
+
+    g.gain.setValueAtTime(0.001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+
+    o.connect(g);
+    g.connect(audioCtx.destination);
+    o.start();
+    o.stop(audioCtx.currentTime + dur + 0.02);
+  }
+
+  function alertSound(){
+    const now = Date.now();
+    if(now - lastAlertAt < ALERT_COOLDOWN_MS) return;
+    lastAlertAt = now;
+
+    // “triiiim” simples
+    beep(880, 0.10);
+    setTimeout(()=>beep(1175, 0.10), 140);
+    setTimeout(()=>beep(880, 0.14), 280);
+  }
+
+  soundBtn.addEventListener("click", ()=>{
+    soundEnabled = !soundEnabled;
+    soundBtn.textContent = soundEnabled ? "Som: ON" : "Som: OFF";
+    if(soundEnabled){
+      // cria contexto já no clique
+      ensureAudio();
+      beep(880, 0.08);
+    }
+  });
 
   // =========================
   // UTIL: extrair ID do YouTube
@@ -378,12 +493,8 @@
   setChatHidden(panel1, toggleChat1, false);
   setChatHidden(panel2, toggleChat2, false);
 
-  toggleChat1.addEventListener("click", ()=>{
-    setChatHidden(panel1, toggleChat1, !panel1.classList.contains("chat-hidden"));
-  });
-  toggleChat2.addEventListener("click", ()=>{
-    setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden"));
-  });
+  toggleChat1.addEventListener("click", ()=> setChatHidden(panel1, toggleChat1, !panel1.classList.contains("chat-hidden")));
+  toggleChat2.addEventListener("click", ()=> setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden")));
 
   // =========================
   // IFRAMES / IDs dinâmicos
@@ -432,46 +543,57 @@
   }
 
   // =========================
-  // VIEWERS AO VIVO (YouTube Data API) - CORRIGIDO
+  // VIEWERS + LIVE STATUS (YouTube Data API)
   // =========================
-  async function fetchConcurrentViewers(videoId){
+  async function fetchLiveInfo(videoId){
+    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "" || YOUTUBE_API_KEY === "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU") return null;
 
-  if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "")
-    return null;
+    const url =
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
 
-  const url =
-    `https://www.googleapis.com/youtube/v3/videos` +
-    `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+    const res = await fetch(url);
+    if(!res.ok){
+      let detail = "";
+      try{
+        const err = await res.json();
+        detail = err?.error?.message ? ` | ${err.error.message}` : "";
+      }catch(e){}
+      throw new Error(`API HTTP ${res.status}${detail}`);
+    }
 
-  const res = await fetch(url);
+    const data = await res.json();
+    const item = data.items && data.items[0];
+    const d = item?.liveStreamingDetails;
 
-  if(!res.ok){
-    let detail = "";
-    try{
-      const err = await res.json();
-      detail = err?.error?.message ? ` | ${err.error.message}` : "";
-    }catch(e){}
-    throw new Error(`API HTTP ${res.status}${detail}`);
+    const concurrent = d?.concurrentViewers ? Number(d.concurrentViewers) : 0;
+    const started = !!d?.actualStartTime;
+    const ended = !!d?.actualEndTime;
+    const isLive = started && !ended;
+
+    return { viewers: concurrent, isLive };
   }
-
-  const data = await res.json();
-  const item = data.items && data.items[0];
-
-  const viewers = item?.liveStreamingDetails?.concurrentViewers;
-
-  // Se não estiver ao vivo, retorna 0
-  return viewers ? Number(viewers) : 0;
-}
 
   function formatViewers(n){
     if (n === null) return "👀 —";
     return `👀 ${Number(n).toLocaleString("pt-BR")}`;
   }
 
+  function setLiveBadge(which, isLive){
+    const el = document.getElementById(which === 1 ? "live1Badge" : "live2Badge");
+    el.style.display = isLive ? "inline-flex" : "none";
+  }
+
+  // estados anteriores pra alerta
+  let prev = {
+    live1:false, live2:false,
+    v1:0, v2:0
+  };
+
   async function refreshAll(){
     const status = document.getElementById("status");
     try{
-      status.innerText = "Atualizando títulos e viewers…";
+      status.innerText = "Atualizando…";
 
       const [title1, title2] = await Promise.all([
         fetchTitle(VIDEO_1),
@@ -480,18 +602,45 @@
       document.getElementById("t1").innerText = title1;
       document.getElementById("t2").innerText = title2;
 
-      const [v1, v2] = await Promise.all([
-        fetchConcurrentViewers(VIDEO_1),
-        fetchConcurrentViewers(VIDEO_2)
+      const [info1, info2] = await Promise.all([
+        fetchLiveInfo(VIDEO_1),
+        fetchLiveInfo(VIDEO_2)
       ]);
-      document.getElementById("v1").innerText = formatViewers(v1);
-      document.getElementById("v2").innerText = formatViewers(v2);
 
-      if(v1 === null || v2 === null){
-        status.innerText = "Títulos OK. Cole sua API key para mostrar viewers ao vivo.";
-      } else {
-        status.innerText = "Atualizado ✅";
+      if(info1 === null || info2 === null){
+        document.getElementById("v1").innerText = "👀 —";
+        document.getElementById("v2").innerText = "👀 —";
+        setLiveBadge(1, false);
+        setLiveBadge(2, false);
+        status.innerText = "Títulos OK. Cole a API key para viewers / ao vivo.";
+        return;
       }
+
+      // aplicar UI
+      document.getElementById("v1").innerText = formatViewers(info1.viewers);
+      document.getElementById("v2").innerText = formatViewers(info2.viewers);
+      setLiveBadge(1, info1.isLive);
+      setLiveBadge(2, info2.isLive);
+
+      // alertas
+      if(soundEnabled){
+        if(ALERT_ON_GO_LIVE){
+          if(!prev.live1 && info1.isLive) alertSound();
+          if(!prev.live2 && info2.isLive) alertSound();
+        }
+        if(ALERT_VIEWERS_JUMP > 0){
+          if((info1.viewers - prev.v1) >= ALERT_VIEWERS_JUMP) alertSound();
+          if((info2.viewers - prev.v2) >= ALERT_VIEWERS_JUMP) alertSound();
+        }
+      }
+
+      // atualizar prev
+      prev.live1 = info1.isLive;
+      prev.live2 = info2.isLive;
+      prev.v1 = info1.viewers;
+      prev.v2 = info2.viewers;
+
+      status.innerText = "Atualizado ✅";
     }catch(e){
       status.innerText = `Erro: ${e.message}`;
     }
