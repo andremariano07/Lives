@@ -1,89 +1,212 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Painel de Lives</title>
 
 <style>
-body {
-  margin: 0;
-  background: #111;
-  font-family: Arial, sans-serif;
-}
+  body { margin:0; background:#111; font-family:Arial, sans-serif; color:#fff; }
 
-#clock {
-  text-align: center;
-  color: #00bfff;
-  font-size: 28px;
-  font-weight: bold;
-  padding: 10px;
-}
+  #topbar{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 14px; border-bottom:1px solid #222; gap:12px;
+  }
+  #clock{ color:#00bfff; font-size:22px; font-weight:bold; white-space:nowrap; }
+  #status { color:#bbb; font-size:14px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-.container {
-  display: flex;
-  height: calc(100vh - 60px);
-  gap: 10px;
-  padding: 10px;
-  box-sizing: border-box;
-}
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+    padding:12px;
+    height: calc(100vh - 58px);
+    box-sizing:border-box;
+  }
 
-.live {
-  flex: 1;
-  border: 2px solid #00bfff;
-  border-radius: 10px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  background: #000;
-}
+  .panel{
+    border:2px solid #00bfff;
+    border-radius:12px;
+    overflow:hidden;
+    background:#000;
+    display:flex;
+    flex-direction:column;
+    min-height: 0;
+  }
 
-.title {
-  text-align: center;
-  padding: 8px;
-  background: #00bfff;
-  color: black;
-  font-weight: bold;
-}
+  .title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    background:#00bfff;
+    color:#000;
+    font-weight:bold;
+    padding:8px 10px;
+  }
 
-iframe {
-  flex: 1;
-  border: none;
-}
+  .title .name{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .title .viewers{
+    background: rgba(0,0,0,0.15);
+    padding:4px 8px;
+    border-radius:999px;
+    font-weight:700;
+    white-space:nowrap;
+  }
+
+  .content{
+    display:grid;
+    grid-template-columns: 2fr 1fr; /* vídeo maior, chat menor */
+    flex:1;
+    min-height:0;
+  }
+
+  iframe{ width:100%; height:100%; border:0; }
 </style>
 </head>
 
 <body>
-
-<div id="clock">00:00:00</div>
-
-<div class="container">
-
-  <div class="live">
-    <div class="title">LIVE 1</div>
-    <iframe src="https://www.youtube.com/embed/N0lqE1yAduE" allowfullscreen></iframe>
+  <div id="topbar">
+    <div id="status">Carregando…</div>
+    <div id="clock">00:00:00</div>
   </div>
 
-  <div class="live">
-    <div class="title">LIVE 2</div>
-    <iframe src="https://www.youtube.com/embed/w2wQeZ1L1Mo" allowfullscreen></iframe>
-  </div>
+  <div class="grid">
+    <!-- LIVE 1 -->
+    <div class="panel">
+      <div class="title">
+        <div class="name" id="t1">LIVE 1</div>
+        <div class="viewers" id="v1">👀 —</div>
+      </div>
+      <div class="content">
+        <iframe id="vid1" allowfullscreen></iframe>
+        <iframe id="chat1"></iframe>
+      </div>
+    </div>
 
-</div>
+    <!-- LIVE 2 -->
+    <div class="panel">
+      <div class="title">
+        <div class="name" id="t2">LIVE 2</div>
+        <div class="viewers" id="v2">👀 —</div>
+      </div>
+      <div class="content">
+        <iframe id="vid2" allowfullscreen></iframe>
+        <iframe id="chat2"></iframe>
+      </div>
+    </div>
+  </div>
 
 <script>
-function updateClock() {
-  const now = new Date();
-  const h = String(now.getHours()).padStart(2,'0');
-  const m = String(now.getMinutes()).padStart(2,'0');
-  const s = String(now.getSeconds()).padStart(2,'0');
-  document.getElementById('clock').innerText = `${h}:${m}:${s}`;
-}
+  // =========================
+  // CONFIG
+  // =========================
+  const VIDEO_1 = "N0lqE1yAduE";
+  const VIDEO_2 = "w2wQeZ1L1Mo";
 
-setInterval(updateClock, 1000);
-updateClock();
+  // ⚠️ Cole aqui a NOVA chave (a que você criar depois de revogar a antiga)
+  const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
+
+  // Para chat embutido:
+  // - servidor local: "localhost"
+  // - GitHub Pages: "seuusuario.github.io"
+  const EMBED_DOMAIN = "andremariano07.github.io";
+
+  const REFRESH_EVERY_MS = 15000; // 15s
+
+  // =========================
+  // RELÓGIO
+  // =========================
+  function updateClock(){
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2,'0');
+    const m = String(now.getMinutes()).padStart(2,'0');
+    const s = String(now.getSeconds()).padStart(2,'0');
+    document.getElementById('clock').innerText = `${h}:${m}:${s}`;
+  }
+  setInterval(updateClock, 1000); updateClock();
+
+  // =========================
+  // IFRAMES
+  // =========================
+  document.getElementById("vid1").src = `https://www.youtube.com/embed/${VIDEO_1}`;
+  document.getElementById("vid2").src = `https://www.youtube.com/embed/${VIDEO_2}`;
+
+  document.getElementById("chat1").src = `https://www.youtube.com/live_chat?v=${VIDEO_1}&embed_domain=${EMBED_DOMAIN}`;
+  document.getElementById("chat2").src = `https://www.youtube.com/live_chat?v=${VIDEO_2}&embed_domain=${EMBED_DOMAIN}`;
+
+  // =========================
+  // TÍTULO AUTOMÁTICO (oEmbed)
+  // =========================
+  async function fetchTitle(videoId){
+    const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("Falha ao buscar título (oEmbed).");
+    const data = await res.json();
+    return data.title || "Sem título";
+  }
+
+  // =========================
+  // VIEWERS AO VIVO (YouTube Data API)
+  // =========================
+  async function fetchConcurrentViewers(videoId){
+    if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.includes("COLE_SUA_NOVA_KEY_AQUI")) return null;
+
+    const url =
+      `https://www.googleapis.com/youtube/v3/videos` +
+      `?part=liveStreamingDetails&id=${videoId}&key=${encodeURIComponent(YOUTUBE_API_KEY)}`;
+
+    const res = await fetch(url);
+    if(!res.ok) throw new Error("Falha ao buscar viewers (API).");
+    const data = await res.json();
+
+    const item = data.items && data.items[0];
+    const viewers = item?.liveStreamingDetails?.concurrentViewers;
+
+    return viewers ? Number(viewers) : 0;
+  }
+
+  function formatViewers(n){
+    if (n === null) return "👀 —";
+    return `👀 ${Number(n).toLocaleString("pt-BR")}`;
+  }
+
+  async function refreshAll(){
+    const status = document.getElementById("status");
+    try{
+      status.innerText = "Atualizando títulos e viewers…";
+
+      const [title1, title2] = await Promise.all([
+        fetchTitle(VIDEO_1),
+        fetchTitle(VIDEO_2)
+      ]);
+      document.getElementById("t1").innerText = title1;
+      document.getElementById("t2").innerText = title2;
+
+      const [v1, v2] = await Promise.all([
+        fetchConcurrentViewers(VIDEO_1),
+        fetchConcurrentViewers(VIDEO_2)
+      ]);
+      document.getElementById("v1").innerText = formatViewers(v1);
+      document.getElementById("v2").innerText = formatViewers(v2);
+
+      if(v1 === null || v2 === null){
+        status.innerText = "Títulos OK. Cole sua YouTube API key para ver viewers ao vivo.";
+      } else {
+        status.innerText = "Atualizado ✅";
+      }
+    }catch(e){
+      status.innerText = `Erro: ${e.message}`;
+    }
+  }
+
+  refreshAll();
+  setInterval(refreshAll, REFRESH_EVERY_MS);
 </script>
-
 </body>
 </html>
