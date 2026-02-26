@@ -73,6 +73,11 @@
     min-height: 0;
   }
 
+  /* ✅ quando só tem 1 live: ocupa largura toda */
+  .grid.single-live{
+    grid-template-columns: 1fr;
+  }
+
   .title{
     display:flex;
     justify-content:space-between;
@@ -338,11 +343,12 @@
 
         <div class="field">
           <label for="liveUrl2">Link da Live 2 (YouTube)</label>
-          <input id="liveUrl2" placeholder="https://www.youtube.com/watch?v=..." />
+          <input id="liveUrl2" placeholder="(opcional) https://www.youtube.com/watch?v=..." />
         </div>
 
         <div class="hint">
           Dica: cole link de <b>watch?v=</b> ou <b>youtu.be/</b>. Os links ficam salvos neste navegador (localStorage).
+          <br><b>Obs:</b> a Live 2 é opcional. Se você deixar em branco, carrega só 1 live.
         </div>
       </div>
 
@@ -492,6 +498,7 @@
   function extractYouTubeId(input){
     if(!input) return null;
     const s = input.trim();
+    if(!s) return null;
 
     if(/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
 
@@ -582,15 +589,44 @@
   let VIDEO_1 = "N0lqE1yAduE";
   let VIDEO_2 = "w2wQeZ1L1Mo";
 
+  // ✅ controla se a live 2 está ativa
+  let HAS_LIVE_2 = true;
+
+  function applyLiveLayout(){
+    const grid = document.getElementById("tab-lives");
+    if(HAS_LIVE_2){
+      panel2.style.display = "";
+      grid.classList.remove("single-live");
+    }else{
+      panel2.style.display = "none";
+      grid.classList.add("single-live");
+
+      // limpa UI da live2 pra não ficar “fantasma”
+      document.getElementById("t2").innerText = "LIVE 2";
+      document.getElementById("v2").innerText = "👀 —";
+      setLiveBadge(2, false);
+    }
+  }
+
   function setVideoIds(id1, id2){
     VIDEO_1 = id1;
-    VIDEO_2 = id2;
+    VIDEO_2 = id2 || VIDEO_2;
+
+    HAS_LIVE_2 = !!id2;
 
     document.getElementById("vid1").src = `https://www.youtube.com/embed/${VIDEO_1}`;
-    document.getElementById("vid2").src = `https://www.youtube.com/embed/${VIDEO_2}`;
-
     document.getElementById("chat1").src = `https://www.youtube.com/live_chat?v=${VIDEO_1}&embed_domain=${EMBED_DOMAIN}`;
-    document.getElementById("chat2").src = `https://www.youtube.com/live_chat?v=${VIDEO_2}&embed_domain=${EMBED_DOMAIN}`;
+
+    if(HAS_LIVE_2){
+      document.getElementById("vid2").src = `https://www.youtube.com/embed/${VIDEO_2}`;
+      document.getElementById("chat2").src = `https://www.youtube.com/live_chat?v=${VIDEO_2}&embed_domain=${EMBED_DOMAIN}`;
+    }else{
+      // deixa vazio pra parar de carregar
+      document.getElementById("vid2").src = "about:blank";
+      document.getElementById("chat2").src = "about:blank";
+    }
+
+    applyLiveLayout();
   }
 
   document.getElementById("saveLinksBtn").addEventListener("click", ()=>{
@@ -598,10 +634,16 @@
     const url2 = liveUrl2Input.value.trim();
 
     const id1 = extractYouTubeId(url1);
-    const id2 = extractYouTubeId(url2);
+    const id2 = extractYouTubeId(url2); // pode ser null (opcional)
 
-    if(!id1 || !id2){
-      alert("Cole links válidos do YouTube para as duas lives (ou o ID do vídeo com 11 caracteres).");
+    if(!id1){
+      alert("Cole um link válido do YouTube para a Live 1 (ou o ID do vídeo com 11 caracteres).");
+      return;
+    }
+
+    // Live 2: se usuário digitou algo e não é válido, avisa
+    if(url2 && !id2){
+      alert("O link da Live 2 não parece válido. Deixe em branco para carregar só 1 live, ou cole um link/ID válido.");
       return;
     }
 
@@ -672,41 +714,67 @@
     try{
       status.innerText = "Atualizando…";
 
-      const [title1, title2] = await Promise.all([ fetchTitle(VIDEO_1), fetchTitle(VIDEO_2) ]);
+      // ✅ busca títulos conforme quantas lives existem
+      const title1Promise = fetchTitle(VIDEO_1);
+      const title2Promise = HAS_LIVE_2 ? fetchTitle(VIDEO_2) : Promise.resolve("LIVE 2");
+
+      const [title1, title2] = await Promise.all([ title1Promise, title2Promise ]);
       document.getElementById("t1").innerText = title1;
-      document.getElementById("t2").innerText = title2;
+      if(HAS_LIVE_2) document.getElementById("t2").innerText = title2;
 
-      const [info1, info2] = await Promise.all([ fetchLiveInfo(VIDEO_1), fetchLiveInfo(VIDEO_2) ]);
+      // ✅ viewers/status conforme quantas lives existem
+      const info1Promise = fetchLiveInfo(VIDEO_1);
+      const info2Promise = HAS_LIVE_2 ? fetchLiveInfo(VIDEO_2) : Promise.resolve(null);
 
-      if(info1 === null || info2 === null){
+      const [info1, info2] = await Promise.all([ info1Promise, info2Promise ]);
+
+      // se API key faltando, info1 será null
+      if(info1 === null){
         document.getElementById("v1").innerText = "👀 —";
-        document.getElementById("v2").innerText = "👀 —";
         setLiveBadge(1, false);
-        setLiveBadge(2, false);
+
+        if(HAS_LIVE_2){
+          document.getElementById("v2").innerText = "👀 —";
+          setLiveBadge(2, false);
+        }
         status.innerText = "Títulos OK. Cole a API key para viewers / ao vivo.";
         return;
       }
 
       document.getElementById("v1").innerText = formatViewers(info1.viewers);
-      document.getElementById("v2").innerText = formatViewers(info2.viewers);
       setLiveBadge(1, info1.isLive);
-      setLiveBadge(2, info2.isLive);
+
+      if(HAS_LIVE_2){
+        if(info2 === null){
+          document.getElementById("v2").innerText = "👀 —";
+          setLiveBadge(2, false);
+        }else{
+          document.getElementById("v2").innerText = formatViewers(info2.viewers);
+          setLiveBadge(2, info2.isLive);
+        }
+      }
 
       if(soundEnabled){
         if(ALERT_ON_GO_LIVE){
           if(!prev.live1 && info1.isLive) alertSound();
-          if(!prev.live2 && info2.isLive) alertSound();
+          if(HAS_LIVE_2 && info2 && !prev.live2 && info2.isLive) alertSound();
         }
         if(ALERT_VIEWERS_JUMP > 0){
           if((info1.viewers - prev.v1) >= ALERT_VIEWERS_JUMP) alertSound();
-          if((info2.viewers - prev.v2) >= ALERT_VIEWERS_JUMP) alertSound();
+          if(HAS_LIVE_2 && info2 && (info2.viewers - prev.v2) >= ALERT_VIEWERS_JUMP) alertSound();
         }
       }
 
       prev.live1 = info1.isLive;
-      prev.live2 = info2.isLive;
       prev.v1 = info1.viewers;
-      prev.v2 = info2.viewers;
+
+      if(HAS_LIVE_2 && info2){
+        prev.live2 = info2.isLive;
+        prev.v2 = info2.viewers;
+      }else{
+        prev.live2 = false;
+        prev.v2 = 0;
+      }
 
       status.innerText = "Atualizado ✅";
     }catch(e){
@@ -943,10 +1011,11 @@
   // INIT
   // =========================
   const saved = loadSavedLinks();
-  if(saved && saved.url1 && saved.url2){
+  if(saved && saved.url1){
     const id1 = extractYouTubeId(saved.url1);
-    const id2 = extractYouTubeId(saved.url2);
-    if(id1 && id2){
+    const id2 = extractYouTubeId(saved.url2); // pode ser null
+
+    if(id1){
       setVideoIds(id1, id2);
       refreshAll();
       setInterval(refreshAll, REFRESH_EVERY_MS);
