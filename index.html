@@ -32,7 +32,31 @@
   .titleRight{ display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap; }
 
   .pill{ background:rgba(0,0,0,0.25); padding:6px 10px; border-radius:999px; font-weight:900; white-space:nowrap; min-width:90px; text-align:center; }
-  .miniBtn{ background:rgba(0,0,0,0.35); border:1px solid rgba(0,0,0,0.20); color:#fff; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:900; white-space:nowrap; }
+
+  .miniBtn{
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(0,0,0,0.20);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:900;
+    white-space:nowrap;
+  }
+
+  /* ✅ Botões estilo da imagem (azul “pílula”) */
+  .chipBtn{
+    background:linear-gradient(180deg, #1fb8ff 0%, #0aa0e6 100%);
+    border:1px solid rgba(0,0,0,0.25);
+    color:#001018;
+    padding:6px 12px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:1000;
+    white-space:nowrap;
+    box-shadow:0 6px 14px rgba(0,0,0,0.35);
+  }
+  .chipBtn:active{ transform:translateY(1px); }
 
   .liveBadge{ display:none; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,0.30); color:#fff; font-weight:900; white-space:nowrap; border:1px solid rgba(0,0,0,0.20); }
   .liveBadge .dot{ width:10px; height:10px; border-radius:50%; background:var(--bad); box-shadow:0 0 0 0 rgba(255,43,43,0.7); animation:pulse 1.2s infinite; }
@@ -56,13 +80,26 @@
   .hint{ color:#9c9c9c; font-size:12px; line-height:1.35; }
   .modalFooter{ padding:14px 16px; border-top:1px solid #222; display:flex; justify-content:flex-end; gap:10px; }
 
-  /* Toast */
-  .toastWrap{ position:fixed; right:16px; bottom:16px; display:grid; gap:10px; z-index:10000; }
+  /* ✅ Notificação (canto superior direito) */
+  .toastWrap{
+    position:fixed;
+    top:14px;
+    right:14px;
+    display:grid;
+    gap:10px;
+    z-index:10000;
+  }
   .toast{
-    background:#0b0b0b; border:1px solid #2a2a2a; border-radius:14px;
-    padding:12px 12px; min-width:260px; max-width:360px;
+    background:#0b0b0b;
+    border:1px solid #2a2a2a;
+    border-radius:14px;
+    padding:12px 12px;
+    min-width:280px;
+    max-width:380px;
     box-shadow:0 14px 40px rgba(0,0,0,0.55);
-    display:flex; gap:10px; align-items:flex-start;
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
   }
   .toastDot{ width:12px; height:12px; border-radius:50%; background:var(--ok); margin-top:4px; box-shadow:0 0 0 0 rgba(0,255,136,0.6); animation:pulseOk 1.3s infinite; }
   @keyframes pulseOk{ 0%{box-shadow:0 0 0 0 rgba(0,255,136,0.55);} 70%{box-shadow:0 0 0 12px rgba(0,255,136,0);} 100%{box-shadow:0 0 0 0 rgba(0,255,136,0);} }
@@ -118,11 +155,8 @@
       <button class="btn secondary tabBtn active" data-tab="lives" type="button">🎥 Lives</button>
       <button class="btn secondary tabBtn" data-tab="favoritos" type="button">⭐ Favoritos</button>
 
-      <!-- ✅ Opção 1: login fora do iframe + botões de abrir em janela -->
-      <button class="btn secondary" id="kickLoginBtn" type="button">Abrir Kick (login)</button>
-
+      <!-- ✅ removido: Abrir Kick (login) / Som / etc (como você pediu tirar esses botões) -->
       <button class="btn secondary" id="tvBtn" type="button">Modo TV</button>
-      <button class="btn secondary" id="soundBtn" type="button">Som: OFF</button>
 
       <div id="status">Carregando…</div>
     </div>
@@ -138,8 +172,9 @@
           <div class="liveBadge" id="live1Badge"><span class="dot"></span>AO VIVO</div>
           <div class="pill" id="v1">👀 —</div>
           <button class="miniBtn" id="toggleChat1" type="button">Ocultar chat</button>
-          <button class="miniBtn" id="openChat1" type="button">Chat (janela)</button>
-          <button class="miniBtn" id="openLive1" type="button">Live (janela)</button>
+          <!-- ✅ novo estilo -->
+          <button class="chipBtn" id="openChat1" type="button">Chat (janela)</button>
+          <button class="chipBtn" id="openLive1" type="button">Live (janela)</button>
         </div>
       </div>
       <div class="content">
@@ -155,8 +190,9 @@
           <div class="liveBadge" id="live2Badge"><span class="dot"></span>AO VIVO</div>
           <div class="pill" id="v2">👀 —</div>
           <button class="miniBtn" id="toggleChat2" type="button">Ocultar chat</button>
-          <button class="miniBtn" id="openChat2" type="button">Chat (janela)</button>
-          <button class="miniBtn" id="openLive2" type="button">Live (janela)</button>
+          <!-- ✅ novo estilo -->
+          <button class="chipBtn" id="openChat2" type="button">Chat (janela)</button>
+          <button class="chipBtn" id="openLive2" type="button">Live (janela)</button>
         </div>
       </div>
       <div class="content">
@@ -179,7 +215,7 @@
     </div>
   </div>
 
-  <!-- Toast container -->
+  <!-- Toast container (canto superior direito) -->
   <div class="toastWrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
   <!-- Modal -->
@@ -216,7 +252,6 @@
   const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
   const EMBED_DOMAIN = "andremariano07.github.io";
   const REFRESH_EVERY_MS = 15000;
-  const LS_KEY = "painelLives.links.v5";
 
   // ✅ seu worker
   const KICK_PROXY_BASE = "https://tiny-moon-2739.andrekratos.workers.dev";
@@ -227,97 +262,10 @@
     { label: "gaules",  url: "https://kick.com/gaules" }
   ];
 
-  // ===== Notificações =====
-  const NOTIFY_ON_ONLINE = true;   // quando alguém ficar AO VIVO
+  // ===== Notificação quando ficar AO VIVO =====
+  const NOTIFY_ON_ONLINE = true;
   const NOTIFY_COOLDOWN_MS = 12000;
-  const LS_NOTIFY_KEY = "painelLives.notifyState.v1";
-
-  // ===== SOM =====
-  const soundBtn = document.getElementById("soundBtn");
-  let soundEnabled = false, audioCtx = null, lastAlertAt = 0;
-
-  function ensureAudio(){
-    if(audioCtx) return;
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new Ctx();
-  }
-  function beep(freq=880, dur=0.12){
-    if(!soundEnabled) return;
-    ensureAudio();
-    if(audioCtx.state === "suspended") audioCtx.resume();
-    const o = audioCtx.createOscillator();
-    const g = audioCtx.createGain();
-    o.type = "sine"; o.frequency.value = freq;
-    g.gain.setValueAtTime(0.001, audioCtx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.12, audioCtx.currentTime + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
-    o.connect(g); g.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime + dur + 0.02);
-  }
-  function alertSound(){
-    const now = Date.now();
-    if(now - lastAlertAt < NOTIFY_COOLDOWN_MS) return;
-    lastAlertAt = now;
-    beep(880, 0.10);
-    setTimeout(()=>beep(1175, 0.10), 140);
-    setTimeout(()=>beep(880, 0.14), 280);
-  }
-  soundBtn.addEventListener("click", ()=>{
-    soundEnabled = !soundEnabled;
-    soundBtn.textContent = soundEnabled ? "Som: ON" : "Som: OFF";
-    if(soundEnabled){ ensureAudio(); beep(880, 0.08); }
-  });
-
-  // ===== Toast =====
-  const toastWrap = document.getElementById("toastWrap");
-  function showToast({title, text, actions=[]}, ttl=9000){
-    const el = document.createElement("div");
-    el.className = "toast";
-    el.innerHTML = `
-      <div class="toastDot" aria-hidden="true"></div>
-      <div style="min-width:0;flex:1;">
-        <p class="toastTitle">${escapeHtml(title)}</p>
-        <p class="toastText">${escapeHtml(text || "")}</p>
-        <div class="toastBtns"></div>
-      </div>
-    `;
-    const btns = el.querySelector(".toastBtns");
-    actions.forEach(a=>{
-      const b = document.createElement("button");
-      b.className = "toastBtn";
-      b.type = "button";
-      b.textContent = a.label;
-      b.addEventListener("click", ()=>{
-        try{ a.onClick && a.onClick(); }catch(e){}
-        el.remove();
-      });
-      btns.appendChild(b);
-    });
-
-    toastWrap.appendChild(el);
-    setTimeout(()=>{ if(el.isConnected) el.remove(); }, ttl);
-  }
-  function escapeHtml(s){
-    return String(s ?? "").replace(/[&<>"']/g, (c)=>({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-    }[c]));
-  }
-
-  // ===== Notificação nativa (opcional) =====
-  async function requestBrowserNotificationsIfNeeded(){
-    if(!("Notification" in window)) return false;
-    if(Notification.permission === "granted") return true;
-    if(Notification.permission === "denied") return false;
-    try{
-      const p = await Notification.requestPermission();
-      return p === "granted";
-    }catch(e){ return false; }
-  }
-  function pushBrowserNotification(title, body){
-    if(!("Notification" in window)) return;
-    if(Notification.permission !== "granted") return;
-    try{ new Notification(title, { body }); }catch(e){}
-  }
+  const LS_NOTIFY_KEY = "painelLives.notifyState.v2";
 
   // ===== RELÓGIO =====
   function updateClock(){
@@ -356,17 +304,42 @@
   }
   tvBtn.addEventListener("click", toggleTV);
 
-  // ===== Abrir Kick (login) fora do iframe =====
-  document.getElementById("kickLoginBtn").addEventListener("click", async ()=>{
-    // pedir permissão de notificação (só se quiser usar notificação nativa)
-    await requestBrowserNotificationsIfNeeded();
-    window.open("https://kick.com/", "_blank", "noopener,noreferrer");
-    showToast({
-      title: "Login Kick",
-      text: "Faça login na aba que abriu. No painel, use 'Chat (janela)' para chat logado.",
-      actions:[]
-    }, 10000);
-  });
+  // ===== Toast (canto superior direito) =====
+  const toastWrap = document.getElementById("toastWrap");
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c)=>({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  function showToast({title, text, actions=[]}, ttl=10000){
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.innerHTML = `
+      <div class="toastDot" aria-hidden="true"></div>
+      <div style="min-width:0;flex:1;">
+        <p class="toastTitle">${escapeHtml(title)}</p>
+        <p class="toastText">${escapeHtml(text || "")}</p>
+        <div class="toastBtns"></div>
+      </div>
+    `;
+    const btns = el.querySelector(".toastBtns");
+    actions.forEach(a=>{
+      const b = document.createElement("button");
+      b.className = "toastBtn";
+      b.type = "button";
+      b.textContent = a.label;
+      b.addEventListener("click", ()=>{
+        try{ a.onClick && a.onClick(); }catch(e){}
+        el.remove();
+      });
+      btns.appendChild(b);
+    });
+
+    toastWrap.appendChild(el);
+    setTimeout(()=>{ if(el.isConnected) el.remove(); }, ttl);
+  }
 
   // ===== Parse links =====
   function extractYouTubeId(input){
@@ -427,10 +400,11 @@
   const modalOverlay = document.getElementById("modalOverlay");
   const liveUrl1Input = document.getElementById("liveUrl1");
   const liveUrl2Input = document.getElementById("liveUrl2");
+  const LS_KEY = "painelLives.links.v7";
 
-  function saveLinks(url1, url2){ localStorage.setItem("painelLives.links.v6", JSON.stringify({ url1, url2 })); }
-  function loadSavedLinks(){ try{ const raw = localStorage.getItem("painelLives.links.v6"); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
-  function clearSavedLinks(){ localStorage.removeItem("painelLives.links.v6"); }
+  function saveLinks(url1, url2){ localStorage.setItem(LS_KEY, JSON.stringify({ url1, url2 })); }
+  function loadSavedLinks(){ try{ const raw = localStorage.getItem(LS_KEY); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+  function clearSavedLinks(){ localStorage.removeItem(LS_KEY); }
 
   function openModal(){
     const saved = loadSavedLinks();
@@ -501,8 +475,8 @@
     }
 
     if(live.provider === "kick"){
+      // iframe pode ficar deslogado, então você usa "Chat (janela)"
       vid.src = `https://player.kick.com/${encodeURIComponent(live.username)}?autoplay=false&muted=false`;
-      // chat embutido pode ficar deslogado; por isso temos Chat (janela)
       chat.src = `https://kick.com/popout/${encodeURIComponent(live.username)}/chat`;
       return;
     }
@@ -534,27 +508,33 @@
     refreshAll();
   });
 
-  // ===== Opção 1: botões para abrir Kick em janela (logado) =====
+  // ===== Botões "Chat (janela)" e "Live (janela)" =====
   function openKickChatWindow(live){
-    if(!live || live.provider !== "kick") {
-      alert("Esta live não é do Kick.");
-      return;
-    }
+    if(!live || live.provider !== "kick") { alert("Esta live não é do Kick."); return; }
     window.open(`https://kick.com/popout/${encodeURIComponent(live.username)}/chat`, "_blank", "noopener,noreferrer");
   }
-
   function openKickLiveWindow(live){
-    if(!live || live.provider !== "kick") {
-      alert("Esta live não é do Kick.");
-      return;
-    }
+    if(!live || live.provider !== "kick") { alert("Esta live não é do Kick."); return; }
     window.open(`https://kick.com/${encodeURIComponent(live.username)}`, "_blank", "noopener,noreferrer");
+  }
+  function openYouTubeLiveWindow(live){
+    if(!live || live.provider !== "youtube") { alert("Esta live não é do YouTube."); return; }
+    window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(live.id)}`, "_blank", "noopener,noreferrer");
   }
 
   document.getElementById("openChat1").addEventListener("click", ()=> openKickChatWindow(LIVE_1));
-  document.getElementById("openLive1").addEventListener("click", ()=> openKickLiveWindow(LIVE_1));
+  document.getElementById("openLive1").addEventListener("click", ()=>{
+    if(LIVE_1?.provider === "kick") openKickLiveWindow(LIVE_1);
+    else if(LIVE_1?.provider === "youtube") openYouTubeLiveWindow(LIVE_1);
+    else alert("Sem live carregada.");
+  });
+
   document.getElementById("openChat2").addEventListener("click", ()=> openKickChatWindow(LIVE_2));
-  document.getElementById("openLive2").addEventListener("click", ()=> openKickLiveWindow(LIVE_2));
+  document.getElementById("openLive2").addEventListener("click", ()=>{
+    if(LIVE_2?.provider === "kick") openKickLiveWindow(LIVE_2);
+    else if(LIVE_2?.provider === "youtube") openYouTubeLiveWindow(LIVE_2);
+    else alert("Sem live carregada.");
+  });
 
   // ===== APIs =====
   async function fetchYouTubeTitle(videoId){
@@ -589,13 +569,13 @@
     return `👀 ${Number(n).toLocaleString("pt-BR")}`;
   }
 
-  // ===== Notificação: quando alguém ficar online (AO VIVO) =====
+  // ===== Notificação: quando ficar AO VIVO =====
   function loadNotifyState(){
     try{
       const raw = localStorage.getItem(LS_NOTIFY_KEY);
-      return raw ? JSON.parse(raw) : { kick:{}, yt:{} , lastToastAt: 0 };
+      return raw ? JSON.parse(raw) : { kick:{}, yt:{}, lastToastAt: 0 };
     }catch(e){
-      return { kick:{}, yt:{} , lastToastAt: 0 };
+      return { kick:{}, yt:{}, lastToastAt: 0 };
     }
   }
   function saveNotifyState(state){
@@ -603,47 +583,31 @@
   }
   const notifyState = loadNotifyState();
 
-  function maybeNotifyOnline({provider, key, title, viewers, openChat, openLive}){
-    if(!NOTIFY_ON_ONLINE) return;
-    const now = Date.now();
-
-    const wasLive = provider === "kick"
-      ? !!notifyState.kick[key]
-      : !!notifyState.yt[key];
-
-    if(!wasLive){
-      // cooldown global p/ não spammar
-      if(now - (notifyState.lastToastAt || 0) >= NOTIFY_COOLDOWN_MS){
-        notifyState.lastToastAt = now;
-
-        const txt = `${title}${viewers ? ` • ${viewers} viewers` : ""}`;
-        showToast({
-          title: "🔔 Ficou AO VIVO!",
-          text: txt,
-          actions: [
-            { label: "Abrir Live", onClick: openLive },
-            ...(provider === "kick" ? [{ label: "Abrir Chat", onClick: openChat }] : [])
-          ]
-        }, 11000);
-
-        // som (se ligado)
-        if(soundEnabled) alertSound();
-
-        // notificação nativa (se permitida)
-        pushBrowserNotification("Ficou AO VIVO!", txt);
-      }
-    }
-
-    // marca estado atual como live
-    if(provider === "kick") notifyState.kick[key] = true;
-    else notifyState.yt[key] = true;
-
-    saveNotifyState(notifyState);
-  }
-
   function markOffline(provider, key){
     if(provider === "kick") delete notifyState.kick[key];
     else delete notifyState.yt[key];
+    saveNotifyState(notifyState);
+  }
+
+  function maybeNotifyOnline({provider, key, line1, line2, actions}){
+    if(!NOTIFY_ON_ONLINE) return;
+    const now = Date.now();
+
+    const wasLive = provider === "kick" ? !!notifyState.kick[key] : !!notifyState.yt[key];
+    if(!wasLive){
+      if(now - (notifyState.lastToastAt || 0) >= NOTIFY_COOLDOWN_MS){
+        notifyState.lastToastAt = now;
+        showToast({
+          title: "🔔 Ficou AO VIVO!",
+          text: `${line1}${line2 ? " • " + line2 : ""}`,
+          actions
+        }, 11000);
+      }
+    }
+
+    if(provider === "kick") notifyState.kick[key] = true;
+    else notifyState.yt[key] = true;
+
     saveNotifyState(notifyState);
   }
 
@@ -656,58 +620,57 @@
       titleEl.innerText = which === 1 ? "LIVE 1" : "LIVE 2";
       viewersEl.innerText = "👀 —";
       setLiveBadge(which, false);
-      return { provider:"none" };
+      return;
     }
 
     if(live.provider === "kick"){
       const info = await fetchKickInfo(live.username);
       const title = info?.title || `KICK: ${live.username}`;
       const viewers = (info?.viewers ?? null);
+      const isLive = !!info?.isLive;
 
       titleEl.innerText = title;
       viewersEl.innerText = fmtViewers(viewers);
-      const isLive = !!info?.isLive;
       setLiveBadge(which, isLive);
 
       if(isLive){
         maybeNotifyOnline({
           provider: "kick",
           key: live.username,
-          title: `${live.username} — ${title}`,
-          viewers: (viewers === null || viewers === undefined) ? "" : Number(viewers).toLocaleString("pt-BR"),
-          openChat: ()=> openKickChatWindow(live),
-          openLive: ()=> openKickLiveWindow(live),
+          line1: `${live.username}`,
+          line2: title,
+          actions: [
+            { label: "Abrir Live", onClick: ()=> openKickLiveWindow(live) },
+            { label: "Abrir Chat", onClick: ()=> openKickChatWindow(live) }
+          ]
         });
       }else{
         markOffline("kick", live.username);
       }
-
-      return { provider:"kick", info };
+      return;
     }
 
+    // youtube
     const title = await fetchYouTubeTitle(live.id);
     titleEl.innerText = title;
-
     const info = await fetchYouTubeLiveInfo(live.id);
-    const viewers = info?.viewers ?? null;
     const isLive = !!info?.isLive;
-    viewersEl.innerText = fmtViewers(viewers);
+    viewersEl.innerText = fmtViewers(info?.viewers ?? null);
     setLiveBadge(which, isLive);
 
     if(isLive){
       maybeNotifyOnline({
         provider: "youtube",
         key: live.id,
-        title: title,
-        viewers: (viewers === null || viewers === undefined) ? "" : Number(viewers).toLocaleString("pt-BR"),
-        openChat: null,
-        openLive: ()=> window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(live.id)}`, "_blank", "noopener,noreferrer")
+        line1: `YouTube`,
+        line2: title,
+        actions: [
+          { label: "Abrir Live", onClick: ()=> openYouTubeLiveWindow(live) }
+        ]
       });
     }else{
       markOffline("youtube", live.id);
     }
-
-    return { provider:"youtube", info };
   }
 
   async function refreshAll(){
@@ -757,12 +720,12 @@
       el.innerHTML = `
         <div class="favLeft">
           <div class="favAvatar">
-            ${avatar ? `<img src="${avatar}" alt="${row.user}">` : `<span>${avatarFallbackLetter(row.user)}</span>`}
+            ${avatar ? `<img src="${avatar}" alt="${escapeHtml(row.user)}">` : `<span>${escapeHtml(avatarFallbackLetter(row.user))}</span>`}
           </div>
 
           <div class="favMid">
             <div class="favTop">
-              <div class="favUser">${row.user}</div>
+              <div class="favUser">${escapeHtml(row.user)}</div>
               <div class="favLive ${isLive ? "live" : "offline"}">
                 <span class="dot"></span>
                 ${isLive ? "AO VIVO" : "OFFLINE"}
@@ -792,15 +755,17 @@
 
       list.appendChild(el);
 
-      // ✅ notifica favoritos também quando entra ao vivo
+      // notifica quando favorito ficar ao vivo
       if(isLive){
         maybeNotifyOnline({
           provider: "kick",
           key: row.user,
-          title: `${row.user} — ${title}`,
-          viewers: (viewers === null) ? "" : viewers.toLocaleString("pt-BR"),
-          openChat: ()=> window.open(`https://kick.com/popout/${encodeURIComponent(row.user)}/chat`, "_blank", "noopener,noreferrer"),
-          openLive: ()=> window.open(`https://kick.com/${encodeURIComponent(row.user)}`, "_blank", "noopener,noreferrer"),
+          line1: `${row.user}`,
+          line2: title,
+          actions: [
+            { label: "Abrir Live", onClick: ()=> window.open(`https://kick.com/${encodeURIComponent(row.user)}`, "_blank", "noopener,noreferrer") },
+            { label: "Abrir Chat", onClick: ()=> window.open(`https://kick.com/popout/${encodeURIComponent(row.user)}/chat`, "_blank", "noopener,noreferrer") }
+          ]
         });
       }else{
         markOffline("kick", row.user);
