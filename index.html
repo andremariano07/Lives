@@ -316,7 +316,6 @@
       <div class="title">
         <div class="name">🗺 Expedição Transamazonica</div>
 
-        <!-- ✅ 1) Pills adicionadas no cabeçalho do mapa -->
         <div class="titleRight">
           <div class="pill" id="cityNow">📍 —</div>
           <div class="pill" id="weatherNow">🌤 —</div>
@@ -337,17 +336,19 @@
 
       <div class="modalBody">
         <div class="field">
-          <label for="liveUrl1">Link da Live 1 (YouTube)</label>
-          <input id="liveUrl1" placeholder="https://www.youtube.com/watch?v=..." />
+          <label for="liveUrl1">Link da Live 1 (YouTube ou Kick)</label>
+          <input id="liveUrl1" placeholder="https://www.youtube.com/watch?v=...  ou  https://kick.com/usuario" />
         </div>
 
         <div class="field">
-          <label for="liveUrl2">Link da Live 2 (YouTube)</label>
-          <input id="liveUrl2" placeholder="(opcional) https://www.youtube.com/watch?v=..." />
+          <label for="liveUrl2">Link da Live 2 (YouTube ou Kick)</label>
+          <input id="liveUrl2" placeholder="(opcional) https://youtu.be/...  ou  https://kick.com/usuario" />
         </div>
 
         <div class="hint">
-          Dica: cole link de <b>watch?v=</b> ou <b>youtu.be/</b>. Os links ficam salvos neste navegador (localStorage).
+          YouTube: cole link de <b>watch?v=</b> ou <b>youtu.be/</b> (ou o ID com 11 caracteres).<br>
+          Kick: cole link do canal <b>https://kick.com/USUARIO</b> (ou <b>https://player.kick.com/USUARIO</b>).<br>
+          Os links ficam salvos neste navegador (localStorage).
           <br><b>Obs:</b> a Live 2 é opcional. Se você deixar em branco, carrega só 1 live.
         </div>
       </div>
@@ -366,7 +367,7 @@
   const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
   const EMBED_DOMAIN = "andremariano07.github.io";
   const REFRESH_EVERY_MS = 15000;
-  const LS_KEY = "painelLives.links.v1";
+  const LS_KEY = "painelLives.links.v2"; // <-- versão nova (pra não conflitar)
 
   // Alertas
   const ALERT_ON_GO_LIVE = true;
@@ -378,10 +379,10 @@
   const HELIOS_REFRESH_MS = 10000;
   const HELIOS_MIN_MOVE_KM = 0.01; // 10m
 
-  // ✅ 2) Configs do clima (perto do HELIOS...)
-  const WEATHER_REFRESH_MS = 180000; // 3 min (pra não abusar)
+  // Clima
+  const WEATHER_REFRESH_MS = 180000; // 3 min
   let lastWeatherAt = 0;
-  let lastWeatherKey = ""; // evita refazer se não mudou muito
+  let lastWeatherKey = "";
 
   // =========================
   // RELÓGIO
@@ -522,6 +523,62 @@
   }
 
   // =========================
+  // ✅ NOVO: extrair usuário do Kick
+  // Aceita:
+  // - https://kick.com/usuario
+  // - https://player.kick.com/usuario
+  // - https://kick.com/popout/usuario/chat  (também pega o usuario)
+  // =========================
+  function extractKickUsername(input){
+    if(!input) return null;
+    const s = input.trim();
+    if(!s) return null;
+
+    try{
+      const u = new URL(s);
+
+      const host = (u.hostname || "").toLowerCase();
+      const isKick = host === "kick.com" || host.endsWith(".kick.com");
+      const isKickPlayer = host === "player.kick.com";
+
+      if(!isKick && !isKickPlayer) return null;
+
+      const parts = u.pathname.split("/").filter(Boolean);
+
+      // /popout/USER/chat
+      if(parts[0] === "popout" && parts.length >= 2){
+        const user = parts[1];
+        return user ? user.toLowerCase() : null;
+      }
+
+      // /USER
+      const user = parts[0];
+      return user ? user.toLowerCase() : null;
+
+    }catch(e){
+      return null;
+    }
+  }
+
+  // =========================
+  // ✅ NOVO: detectar provedor (YouTube ou Kick)
+  // =========================
+  function parseLiveInput(input){
+    const raw = (input || "").trim();
+    if(!raw) return null;
+
+    // YouTube
+    const yid = extractYouTubeId(raw);
+    if(yid) return { provider:"youtube", id:yid, raw };
+
+    // Kick
+    const user = extractKickUsername(raw);
+    if(user) return { provider:"kick", username:user, raw };
+
+    return null;
+  }
+
+  // =========================
   // MODAL
   // =========================
   const modalOverlay = document.getElementById("modalOverlay");
@@ -584,10 +641,10 @@
   toggleChat2.addEventListener("click", ()=> setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden")));
 
   // =========================
-  // IFRAMES / IDs dinâmicos
+  // IFRAMES / fontes dinâmicas
   // =========================
-  let VIDEO_1 = "N0lqE1yAduE";
-  let VIDEO_2 = "w2wQeZ1L1Mo";
+  let LIVE_1 = { provider:"youtube", id:"N0lqE1yAduE", raw:"" };
+  let LIVE_2 = { provider:"youtube", id:"w2wQeZ1L1Mo", raw:"" };
 
   // ✅ controla se a live 2 está ativa
   let HAS_LIVE_2 = true;
@@ -608,22 +665,53 @@
     }
   }
 
-  function setVideoIds(id1, id2){
-    VIDEO_1 = id1;
-    VIDEO_2 = id2 || VIDEO_2;
+  function setLiveBadge(which, isLive){
+    const el = document.getElementById(which === 1 ? "live1Badge" : "live2Badge");
+    el.style.display = isLive ? "inline-flex" : "none";
+  }
 
-    HAS_LIVE_2 = !!id2;
+  function setIframesFor(which, live){
+    const vid = document.getElementById(which === 1 ? "vid1" : "vid2");
+    const chat = document.getElementById(which === 1 ? "chat1" : "chat2");
 
-    document.getElementById("vid1").src = `https://www.youtube.com/embed/${VIDEO_1}`;
-    document.getElementById("chat1").src = `https://www.youtube.com/live_chat?v=${VIDEO_1}&embed_domain=${EMBED_DOMAIN}`;
+    if(!live){
+      vid.src = "about:blank";
+      chat.src = "about:blank";
+      return;
+    }
+
+    if(live.provider === "youtube"){
+      const id = live.id;
+      vid.src = `https://www.youtube.com/embed/${id}`;
+      chat.src = `https://www.youtube.com/live_chat?v=${id}&embed_domain=${EMBED_DOMAIN}`;
+      return;
+    }
+
+    if(live.provider === "kick"){
+      const user = live.username;
+      // Player oficial: https://player.kick.com/USER
+      // Chat (popout): https://kick.com/popout/USER/chat
+      vid.src = `https://player.kick.com/${encodeURIComponent(user)}?autoplay=false&muted=false`;
+      chat.src = `https://kick.com/popout/${encodeURIComponent(user)}/chat`;
+      return;
+    }
+
+    vid.src = "about:blank";
+    chat.src = "about:blank";
+  }
+
+  function setLives(l1, l2){
+    LIVE_1 = l1;
+    LIVE_2 = l2 || LIVE_2;
+
+    HAS_LIVE_2 = !!l2;
+
+    setIframesFor(1, LIVE_1);
 
     if(HAS_LIVE_2){
-      document.getElementById("vid2").src = `https://www.youtube.com/embed/${VIDEO_2}`;
-      document.getElementById("chat2").src = `https://www.youtube.com/live_chat?v=${VIDEO_2}&embed_domain=${EMBED_DOMAIN}`;
+      setIframesFor(2, LIVE_2);
     }else{
-      // deixa vazio pra parar de carregar
-      document.getElementById("vid2").src = "about:blank";
-      document.getElementById("chat2").src = "about:blank";
+      setIframesFor(2, null);
     }
 
     applyLiveLayout();
@@ -633,30 +721,29 @@
     const url1 = liveUrl1Input.value.trim();
     const url2 = liveUrl2Input.value.trim();
 
-    const id1 = extractYouTubeId(url1);
-    const id2 = extractYouTubeId(url2); // pode ser null (opcional)
+    const l1 = parseLiveInput(url1);
+    const l2 = url2 ? parseLiveInput(url2) : null;
 
-    if(!id1){
-      alert("Cole um link válido do YouTube para a Live 1 (ou o ID do vídeo com 11 caracteres).");
+    if(!l1){
+      alert("Cole um link válido para a Live 1 (YouTube ou Kick).");
       return;
     }
 
-    // Live 2: se usuário digitou algo e não é válido, avisa
-    if(url2 && !id2){
-      alert("O link da Live 2 não parece válido. Deixe em branco para carregar só 1 live, ou cole um link/ID válido.");
+    if(url2 && !l2){
+      alert("O link da Live 2 não parece válido. Deixe em branco para carregar só 1 live, ou cole um link válido (YouTube/Kick).");
       return;
     }
 
     saveLinks(url1, url2);
-    setVideoIds(id1, id2);
+    setLives(l1, l2);
     closeModal();
     refreshAll();
   });
 
   // =========================
-  // TÍTULO AUTOMÁTICO (oEmbed)
+  // TÍTULO AUTOMÁTICO (YouTube oEmbed)
   // =========================
-  async function fetchTitle(videoId){
+  async function fetchYouTubeTitle(videoId){
     const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
     const res = await fetch(url);
     if(!res.ok) throw new Error("Falha ao buscar título (oEmbed).");
@@ -664,10 +751,15 @@
     return data.title || "Sem título";
   }
 
+  function kickTitleFromUsername(user){
+    return `KICK: ${user}`;
+  }
+
   // =========================
   // VIEWERS + LIVE STATUS (YouTube Data API)
+  // (Kick: deixamos como — por padrão)
   // =========================
-  async function fetchLiveInfo(videoId){
+  async function fetchYouTubeLiveInfo(videoId){
     if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "") return null;
 
     const url =
@@ -701,82 +793,87 @@
     return `👀 ${Number(n).toLocaleString("pt-BR")}`;
   }
 
-  function setLiveBadge(which, isLive){
-    const el = document.getElementById(which === 1 ? "live1Badge" : "live2Badge");
-    el.style.display = isLive ? "inline-flex" : "none";
-  }
-
-  // estados anteriores pra alerta
+  // estados anteriores pra alerta (somente YouTube)
   let prev = { live1:false, live2:false, v1:0, v2:0 };
+
+  async function refreshOne(which, live){
+    const titleEl = document.getElementById(which === 1 ? "t1" : "t2");
+    const viewersEl = document.getElementById(which === 1 ? "v1" : "v2");
+
+    if(!live){
+      titleEl.innerText = which === 1 ? "LIVE 1" : "LIVE 2";
+      viewersEl.innerText = "👀 —";
+      setLiveBadge(which, false);
+      return { provider:"none" };
+    }
+
+    if(live.provider === "kick"){
+      titleEl.innerText = kickTitleFromUsername(live.username);
+      viewersEl.innerText = "👀 —";
+      setLiveBadge(which, false); // (sem API aqui)
+      return { provider:"kick" };
+    }
+
+    // YouTube
+    const title = await fetchYouTubeTitle(live.id);
+    titleEl.innerText = title;
+
+    const info = await fetchYouTubeLiveInfo(live.id);
+    if(info === null){
+      viewersEl.innerText = "👀 —";
+      setLiveBadge(which, false);
+      return { provider:"youtube", info:null };
+    }
+
+    viewersEl.innerText = formatViewers(info.viewers);
+    setLiveBadge(which, info.isLive);
+    return { provider:"youtube", info };
+  }
 
   async function refreshAll(){
     const status = document.getElementById("status");
     try{
       status.innerText = "Atualizando…";
 
-      // ✅ busca títulos conforme quantas lives existem
-      const title1Promise = fetchTitle(VIDEO_1);
-      const title2Promise = HAS_LIVE_2 ? fetchTitle(VIDEO_2) : Promise.resolve("LIVE 2");
+      const r1p = refreshOne(1, LIVE_1);
+      const r2p = HAS_LIVE_2 ? refreshOne(2, LIVE_2) : Promise.resolve({ provider:"none" });
 
-      const [title1, title2] = await Promise.all([ title1Promise, title2Promise ]);
-      document.getElementById("t1").innerText = title1;
-      if(HAS_LIVE_2) document.getElementById("t2").innerText = title2;
+      const [r1, r2] = await Promise.all([r1p, r2p]);
 
-      // ✅ viewers/status conforme quantas lives existem
-      const info1Promise = fetchLiveInfo(VIDEO_1);
-      const info2Promise = HAS_LIVE_2 ? fetchLiveInfo(VIDEO_2) : Promise.resolve(null);
-
-      const [info1, info2] = await Promise.all([ info1Promise, info2Promise ]);
-
-      // se API key faltando, info1 será null
-      if(info1 === null){
-        document.getElementById("v1").innerText = "👀 —";
-        setLiveBadge(1, false);
-
-        if(HAS_LIVE_2){
-          document.getElementById("v2").innerText = "👀 —";
-          setLiveBadge(2, false);
-        }
-        status.innerText = "Títulos OK. Cole a API key para viewers / ao vivo.";
-        return;
-      }
-
-      document.getElementById("v1").innerText = formatViewers(info1.viewers);
-      setLiveBadge(1, info1.isLive);
-
-      if(HAS_LIVE_2){
-        if(info2 === null){
-          document.getElementById("v2").innerText = "👀 —";
-          setLiveBadge(2, false);
-        }else{
-          document.getElementById("v2").innerText = formatViewers(info2.viewers);
-          setLiveBadge(2, info2.isLive);
-        }
-      }
-
+      // Alertas (apenas para YouTube, onde temos isLive/viewers)
       if(soundEnabled){
+        const i1 = r1.provider === "youtube" ? r1.info : null;
+        const i2 = (HAS_LIVE_2 && r2.provider === "youtube") ? r2.info : null;
+
         if(ALERT_ON_GO_LIVE){
-          if(!prev.live1 && info1.isLive) alertSound();
-          if(HAS_LIVE_2 && info2 && !prev.live2 && info2.isLive) alertSound();
+          if(i1 && !prev.live1 && i1.isLive) alertSound();
+          if(i2 && !prev.live2 && i2.isLive) alertSound();
         }
         if(ALERT_VIEWERS_JUMP > 0){
-          if((info1.viewers - prev.v1) >= ALERT_VIEWERS_JUMP) alertSound();
-          if(HAS_LIVE_2 && info2 && (info2.viewers - prev.v2) >= ALERT_VIEWERS_JUMP) alertSound();
+          if(i1 && (i1.viewers - prev.v1) >= ALERT_VIEWERS_JUMP) alertSound();
+          if(i2 && (i2.viewers - prev.v2) >= ALERT_VIEWERS_JUMP) alertSound();
         }
+
+        prev.live1 = !!(i1 && i1.isLive);
+        prev.v1 = i1 ? i1.viewers : 0;
+        prev.live2 = !!(i2 && i2.isLive);
+        prev.v2 = i2 ? i2.viewers : 0;
       }
 
-      prev.live1 = info1.isLive;
-      prev.v1 = info1.viewers;
+      // Mensagem de status útil
+      const usesKick = (LIVE_1?.provider === "kick") || (HAS_LIVE_2 && LIVE_2?.provider === "kick");
+      const usesYouTube = (LIVE_1?.provider === "youtube") || (HAS_LIVE_2 && LIVE_2?.provider === "youtube");
 
-      if(HAS_LIVE_2 && info2){
-        prev.live2 = info2.isLive;
-        prev.v2 = info2.viewers;
+      if(usesYouTube && (!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim()==="")){
+        status.innerText = usesKick
+          ? "Atualizado ✅ (Kick ok • YouTube sem API: sem viewers/ao vivo)"
+          : "Títulos OK. Cole a API key para viewers / ao vivo.";
       }else{
-        prev.live2 = false;
-        prev.v2 = 0;
+        status.innerText = usesKick
+          ? "Atualizado ✅ (Kick: sem viewers/ao vivo)"
+          : "Atualizado ✅";
       }
 
-      status.innerText = "Atualizado ✅";
     }catch(e){
       status.innerText = `Erro: ${e.message}`;
     }
@@ -796,10 +893,9 @@
     iconAnchor: [9,9]
   });
 
-  // ✅ 1) Estados adicionados (markers + paths + polylines + cores)
-  const userMarkers = {};     // userId -> marker
-  const userPaths = {};       // userId -> array de [lat,lng]
-  const userPolylines = {};   // userId -> polyline (trajeto)
+  const userMarkers = {};
+  const userPaths = {};
+  const userPolylines = {};
   const pathColors = ["#00bfff","#00ff88","#ffcc00","#ff4d4d","#b084ff","#ff7ad9","#66ccff","#ffa866"];
   let totalKm = 0;
 
@@ -826,22 +922,18 @@
     map = L.map("map").setView([-7.9, -61.5], 9);
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
-    // ✅ pedido: logo após criar o map
     setTimeout(()=> map.invalidateSize(true), 150);
 
-    // inicia loop
     refreshHelios();
     heliosTimer = setInterval(refreshHelios, HELIOS_REFRESH_MS);
   }
 
   function formatSpeedKmh(speed){
-    // no Helios parece m/s -> km/h
     const kmh = (Number(speed || 0) * 3.6);
     return `${kmh.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km/h`;
   }
 
-  // ✅ 3) Funções do clima/cidade (antes do refreshHelios)
-  function roundCoord(x){ return Math.round(Number(x) * 100) / 100; } // 2 casas (~1km)
+  function roundCoord(x){ return Math.round(Number(x) * 100) / 100; }
   function weatherCodeToText(code){
     const map = {
       0:"Céu limpo",
@@ -856,7 +948,6 @@
     return map[code] || `Tempo (${code})`;
   }
 
-  // Cidade/Estado pelo GPS (Nominatim)
   async function fetchCityFromLatLng(lat, lon){
     const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
     const res = await fetch(url, { cache:"no-store" });
@@ -868,7 +959,6 @@
     return state ? `${city} - ${state}` : city;
   }
 
-  // Clima atual pelo GPS (Open-Meteo)
   async function fetchWeatherNow(lat, lon){
     const url =
       `https://api.open-meteo.com/v1/forecast` +
@@ -892,7 +982,6 @@
     const now = Date.now();
     if(now - lastWeatherAt < WEATHER_REFRESH_MS) return;
 
-    // evita bater API se mudou muito pouco
     const key = `${roundCoord(lat)},${roundCoord(lon)}`;
     if(key === lastWeatherKey && (now - lastWeatherAt) < WEATHER_REFRESH_MS) return;
 
@@ -909,7 +998,6 @@
       document.getElementById("weatherNow").innerText =
         `🌤 ${Math.round(w.temp)}°C • ${weatherCodeToText(w.code)} • 💨 ${Math.round(w.wind)} km/h`;
     }catch(e){
-      // se falhar, não quebra o mapa
       document.getElementById("cityNow").innerText = `📍 —`;
       document.getElementById("weatherNow").innerText = `🌤 —`;
     }
@@ -932,7 +1020,6 @@
         return;
       }
 
-      // centraliza/ajusta zoom no primeiro retorno (se ainda estiver muito longe)
       const first = data.positions[0];
       if(first && map){
         const z = map.getZoom();
@@ -941,7 +1028,6 @@
         }
       }
 
-      // ✅ 4) Chamar clima/cidade baseado na posição do “primeiro”
       if(first){
         refreshWeatherByPos(first.latitude, first.longitude);
       }
@@ -957,7 +1043,6 @@
           </div>
         `;
 
-        // ✅ 2) Substituição: cria polyline quando o usuário aparece + atualiza quando move
         if(!userMarkers[p.userId]){
           userMarkers[p.userId] = L.marker(pos, { icon: blinkIcon }).addTo(map)
             .bindTooltip(labelHtml, {
@@ -969,7 +1054,6 @@
 
           userPaths[p.userId] = [pos];
 
-          // ✅ cria a linha do trajeto (começa com 1 ponto)
           const color = pathColors[Object.keys(userPolylines).length % pathColors.length];
           userPolylines[p.userId] = L.polyline(userPaths[p.userId], {
             weight: 4,
@@ -990,7 +1074,6 @@
             path.push(pos);
             userPaths[p.userId] = path;
 
-            // ✅ atualiza a linha do trajeto
             const line = userPolylines[p.userId];
             if(line) line.setLatLngs(path);
 
@@ -1012,11 +1095,11 @@
   // =========================
   const saved = loadSavedLinks();
   if(saved && saved.url1){
-    const id1 = extractYouTubeId(saved.url1);
-    const id2 = extractYouTubeId(saved.url2); // pode ser null
+    const l1 = parseLiveInput(saved.url1);
+    const l2 = saved.url2 ? parseLiveInput(saved.url2) : null;
 
-    if(id1){
-      setVideoIds(id1, id2);
+    if(l1){
+      setLives(l1, l2);
       refreshAll();
       setInterval(refreshAll, REFRESH_EVERY_MS);
     }else{
@@ -1025,7 +1108,6 @@
   }else{
     openModal();
   }
-
 </script>
 </body>
 </html>
