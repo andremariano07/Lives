@@ -250,6 +250,66 @@
     box-shadow:0 0 8px rgba(0,191,255,.35);
   }
 
+  /* ===== Favoritos ===== */
+  .favWrap{
+    border:2px solid var(--accent);
+    border-radius:var(--radius);
+    background:var(--panel);
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    min-height: 0;
+    grid-column: 1 / -1;
+  }
+  .favBody{
+    padding:14px;
+    display:grid;
+    gap:10px;
+  }
+  .favBtn{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:12px 12px;
+    border-radius:14px;
+    border:1px solid #2a2a2a;
+    background:#101010;
+    color:#fff;
+    cursor:pointer;
+    font-weight:900;
+  }
+  .favLeft{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+  }
+  .favAvatar{
+    width:34px;
+    height:34px;
+    border-radius:10px;
+    background: rgba(0,191,255,0.15);
+    border:1px solid rgba(0,191,255,0.25);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:1000;
+  }
+  .favName{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .favTag{
+    color:#000;
+    background: var(--accent);
+    padding:6px 10px;
+    border-radius:999px;
+    font-weight:1000;
+    white-space:nowrap;
+  }
+
   @media (max-width: 900px){
     .grid{ grid-template-columns: 1fr; height:auto; min-height: calc(100vh - 58px); }
     .panel{ min-height: 60vh; }
@@ -265,6 +325,7 @@
 
       <!-- Tabs -->
       <button class="btn secondary tabBtn active" data-tab="lives" type="button">🎥 Lives</button>
+      <button class="btn secondary tabBtn" data-tab="favoritos" type="button">⭐ Favoritos</button>
       <button class="btn secondary tabBtn" data-tab="mapa" type="button">📌 Localização</button>
 
       <button class="btn secondary" id="tvBtn" type="button">Modo TV</button>
@@ -310,12 +371,24 @@
     </div>
   </div>
 
+  <!-- TAB FAVORITOS -->
+  <div id="tab-favoritos" class="grid" style="display:none;">
+    <div class="favWrap">
+      <div class="title">
+        <div class="name">⭐ Favoritos (Kick)</div>
+        <div class="titleRight">
+          <div class="pill">Clique para abrir</div>
+        </div>
+      </div>
+      <div class="favBody" id="favList"></div>
+    </div>
+  </div>
+
   <!-- TAB MAPA -->
   <div id="tab-mapa" class="grid" style="display:none;">
     <div class="panel" style="grid-column:1/-1;">
       <div class="title">
         <div class="name">🗺 Expedição Transamazonica</div>
-
         <div class="titleRight">
           <div class="pill" id="cityNow">📍 —</div>
           <div class="pill" id="weatherNow">🌤 —</div>
@@ -367,7 +440,14 @@
   const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
   const EMBED_DOMAIN = "andremariano07.github.io";
   const REFRESH_EVERY_MS = 15000;
-  const LS_KEY = "painelLives.links.v2"; // <-- versão nova (pra não conflitar)
+  const LS_KEY = "painelLives.links.v3";
+
+  // Favoritos (Kick)
+  const FAVORITOS = [
+    { label: "osusto",  url: "https://kick.com/osusto" },
+    { label: "fusion88", url: "https://kick.com/fusion88" },
+    { label: "gaules",  url: "https://kick.com/gaules" }
+  ];
 
   // Alertas
   const ALERT_ON_GO_LIVE = true;
@@ -397,18 +477,21 @@
   setInterval(updateClock, 1000); updateClock();
 
   // =========================
-  // TABS (Lives / Localização)
+  // TABS (Lives / Favoritos / Localização)
   // =========================
   const tabBtns = document.querySelectorAll(".tabBtn");
   const tabLives = document.getElementById("tab-lives");
+  const tabFav   = document.getElementById("tab-favoritos");
   const tabMapa  = document.getElementById("tab-mapa");
 
   function setActiveTab(name){
     tabBtns.forEach(b=>{
       b.classList.toggle("active", b.dataset.tab === name);
     });
+
     tabLives.style.display = (name === "lives") ? "grid" : "none";
-    tabMapa.style.display  = (name === "mapa") ? "grid"  : "none";
+    tabFav.style.display   = (name === "favoritos") ? "grid" : "none";
+    tabMapa.style.display  = (name === "mapa") ? "grid" : "none";
 
     if(name === "mapa"){
       initMapOnce();
@@ -523,11 +606,7 @@
   }
 
   // =========================
-  // ✅ NOVO: extrair usuário do Kick
-  // Aceita:
-  // - https://kick.com/usuario
-  // - https://player.kick.com/usuario
-  // - https://kick.com/popout/usuario/chat  (também pega o usuario)
+  // extrair usuário do Kick
   // =========================
   function extractKickUsername(input){
     if(!input) return null;
@@ -540,18 +619,15 @@
       const host = (u.hostname || "").toLowerCase();
       const isKick = host === "kick.com" || host.endsWith(".kick.com");
       const isKickPlayer = host === "player.kick.com";
-
       if(!isKick && !isKickPlayer) return null;
 
       const parts = u.pathname.split("/").filter(Boolean);
 
-      // /popout/USER/chat
       if(parts[0] === "popout" && parts.length >= 2){
         const user = parts[1];
         return user ? user.toLowerCase() : null;
       }
 
-      // /USER
       const user = parts[0];
       return user ? user.toLowerCase() : null;
 
@@ -560,18 +636,14 @@
     }
   }
 
-  // =========================
-  // ✅ NOVO: detectar provedor (YouTube ou Kick)
-  // =========================
+  // detectar provedor (YouTube ou Kick)
   function parseLiveInput(input){
     const raw = (input || "").trim();
     if(!raw) return null;
 
-    // YouTube
     const yid = extractYouTubeId(raw);
     if(yid) return { provider:"youtube", id:yid, raw };
 
-    // Kick
     const user = extractKickUsername(raw);
     if(user) return { provider:"kick", username:user, raw };
 
@@ -646,7 +718,6 @@
   let LIVE_1 = { provider:"youtube", id:"N0lqE1yAduE", raw:"" };
   let LIVE_2 = { provider:"youtube", id:"w2wQeZ1L1Mo", raw:"" };
 
-  // ✅ controla se a live 2 está ativa
   let HAS_LIVE_2 = true;
 
   function applyLiveLayout(){
@@ -658,7 +729,6 @@
       panel2.style.display = "none";
       grid.classList.add("single-live");
 
-      // limpa UI da live2 pra não ficar “fantasma”
       document.getElementById("t2").innerText = "LIVE 2";
       document.getElementById("v2").innerText = "👀 —";
       setLiveBadge(2, false);
@@ -689,8 +759,6 @@
 
     if(live.provider === "kick"){
       const user = live.username;
-      // Player oficial: https://player.kick.com/USER
-      // Chat (popout): https://kick.com/popout/USER/chat
       vid.src = `https://player.kick.com/${encodeURIComponent(user)}?autoplay=false&muted=false`;
       chat.src = `https://kick.com/popout/${encodeURIComponent(user)}/chat`;
       return;
@@ -703,16 +771,11 @@
   function setLives(l1, l2){
     LIVE_1 = l1;
     LIVE_2 = l2 || LIVE_2;
-
     HAS_LIVE_2 = !!l2;
 
     setIframesFor(1, LIVE_1);
-
-    if(HAS_LIVE_2){
-      setIframesFor(2, LIVE_2);
-    }else{
-      setIframesFor(2, null);
-    }
+    if(HAS_LIVE_2) setIframesFor(2, LIVE_2);
+    else setIframesFor(2, null);
 
     applyLiveLayout();
   }
@@ -728,7 +791,6 @@
       alert("Cole um link válido para a Live 1 (YouTube ou Kick).");
       return;
     }
-
     if(url2 && !l2){
       alert("O link da Live 2 não parece válido. Deixe em branco para carregar só 1 live, ou cole um link válido (YouTube/Kick).");
       return;
@@ -737,6 +799,7 @@
     saveLinks(url1, url2);
     setLives(l1, l2);
     closeModal();
+    setActiveTab("lives");
     refreshAll();
   });
 
@@ -757,7 +820,6 @@
 
   // =========================
   // VIEWERS + LIVE STATUS (YouTube Data API)
-  // (Kick: deixamos como — por padrão)
   // =========================
   async function fetchYouTubeLiveInfo(videoId){
     if(!YOUTUBE_API_KEY || YOUTUBE_API_KEY.trim() === "") return null;
@@ -788,9 +850,19 @@
     return { viewers: concurrent, isLive };
   }
 
-  function formatViewers(n){
-    if (n === null) return "👀 —";
-    return `👀 ${Number(n).toLocaleString("pt-BR")}`;
+  function shortText(s, max=18){
+    const t = String(s || "").trim();
+    if(t.length <= max) return t;
+    return t.slice(0, max-1) + "…";
+  }
+
+  // ✅ Nome da live + viewers juntos na pill
+  function formatViewersWithName(viewers, name){
+    const nm = shortText(name || "—", 18);
+    if(viewers === null || viewers === undefined){
+      return `👀 — • ${nm}`;
+    }
+    return `👀 ${Number(viewers).toLocaleString("pt-BR")} • ${nm}`;
   }
 
   // estados anteriores pra alerta (somente YouTube)
@@ -808,9 +880,10 @@
     }
 
     if(live.provider === "kick"){
-      titleEl.innerText = kickTitleFromUsername(live.username);
-      viewersEl.innerText = "👀 —";
-      setLiveBadge(which, false); // (sem API aqui)
+      const name = kickTitleFromUsername(live.username);
+      titleEl.innerText = name;
+      viewersEl.innerText = formatViewersWithName(null, live.username); // Kick: sem API de viewers aqui
+      setLiveBadge(which, false);
       return { provider:"kick" };
     }
 
@@ -820,14 +893,14 @@
 
     const info = await fetchYouTubeLiveInfo(live.id);
     if(info === null){
-      viewersEl.innerText = "👀 —";
+      viewersEl.innerText = formatViewersWithName(null, "YouTube");
       setLiveBadge(which, false);
-      return { provider:"youtube", info:null };
+      return { provider:"youtube", info:null, title };
     }
 
-    viewersEl.innerText = formatViewers(info.viewers);
+    viewersEl.innerText = formatViewersWithName(info.viewers, title);
     setLiveBadge(which, info.isLive);
-    return { provider:"youtube", info };
+    return { provider:"youtube", info, title };
   }
 
   async function refreshAll(){
@@ -840,7 +913,7 @@
 
       const [r1, r2] = await Promise.all([r1p, r2p]);
 
-      // Alertas (apenas para YouTube, onde temos isLive/viewers)
+      // Alertas (apenas YouTube)
       if(soundEnabled){
         const i1 = r1.provider === "youtube" ? r1.info : null;
         const i2 = (HAS_LIVE_2 && r2.provider === "youtube") ? r2.info : null;
@@ -860,7 +933,6 @@
         prev.v2 = i2 ? i2.viewers : 0;
       }
 
-      // Mensagem de status útil
       const usesKick = (LIVE_1?.provider === "kick") || (HAS_LIVE_2 && LIVE_2?.provider === "kick");
       const usesYouTube = (LIVE_1?.provider === "youtube") || (HAS_LIVE_2 && LIVE_2?.provider === "youtube");
 
@@ -870,7 +942,7 @@
           : "Títulos OK. Cole a API key para viewers / ao vivo.";
       }else{
         status.innerText = usesKick
-          ? "Atualizado ✅ (Kick: sem viewers/ao vivo)"
+          ? "Atualizado ✅ (Kick: viewers pode aparecer como —)"
           : "Atualizado ✅";
       }
 
@@ -878,6 +950,40 @@
       status.innerText = `Erro: ${e.message}`;
     }
   }
+
+  // =========================
+  // FAVORITOS UI
+  // =========================
+  function buildFavList(){
+    const box = document.getElementById("favList");
+    box.innerHTML = "";
+
+    FAVORITOS.forEach((f, idx)=>{
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "favBtn";
+      btn.innerHTML = `
+        <div class="favLeft">
+          <div class="favAvatar">K</div>
+          <div class="favName">${f.label}</div>
+        </div>
+        <div class="favTag">Abrir</div>
+      `;
+      btn.addEventListener("click", ()=>{
+        const live = parseLiveInput(f.url);
+        if(!live){
+          alert("Favorito inválido.");
+          return;
+        }
+        // abre como Live 1 (single-live)
+        setLives(live, null);
+        setActiveTab("lives");
+        refreshAll();
+      });
+      box.appendChild(btn);
+    });
+  }
+  buildFavList();
 
   // =========================
   // MAPA HELIOS (com status + zoom seguro + labels)
