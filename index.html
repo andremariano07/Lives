@@ -9,6 +9,7 @@
   :root{
     --bg:#111; --panel:#000; --accent:#00bfff; --text:#fff; --muted:#bbb; --border:#222;
     --radius:12px; --ok:#00ff88; --bad:#ff2b2b;
+    --chatW: 340px; /* ✅ largura do chat (menor que antes) */
   }
   body { margin:0; background:var(--bg); font-family:Arial, sans-serif; color:var(--text); }
 
@@ -37,8 +38,10 @@
   .liveBadge .dot{ width:10px; height:10px; border-radius:50%; background:var(--bad); box-shadow:0 0 0 0 rgba(255,43,43,0.7); animation:pulse 1.2s infinite; }
   @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(255,43,43,0.65);} 70%{box-shadow:0 0 0 10px rgba(255,43,43,0.0);} 100%{box-shadow:0 0 0 0 rgba(255,43,43,0.0);} }
 
-  .content{ display:grid; grid-template-columns:2fr 1fr; flex:1; min-height:0; }
+  /* ✅ Chat menor */
+  .content{ display:grid; grid-template-columns:1fr var(--chatW); flex:1; min-height:0; }
   iframe{ width:100%; height:100%; border:0; }
+  iframe.chat{ min-width:300px; } /* evita ficar micro */
   .chat-hidden .content{ grid-template-columns:1fr; }
   .chat-hidden iframe.chat{ display:none; }
 
@@ -82,6 +85,7 @@
   .favOpen{ background:var(--accent); color:#000; border:none; border-radius:999px; padding:8px 12px; font-weight:1000; cursor:pointer; white-space:nowrap; }
 
   @media (max-width:900px){
+    :root{ --chatW: 320px; }
     .grid{ grid-template-columns:1fr; height:auto; min-height:calc(100vh - 58px); }
     .panel{ min-height:60vh; }
     #status{ max-width:70vw; }
@@ -96,6 +100,10 @@
 
       <button class="btn secondary tabBtn active" data-tab="lives" type="button">🎥 Lives</button>
       <button class="btn secondary tabBtn" data-tab="favoritos" type="button">⭐ Favoritos</button>
+
+      <!-- ✅ Login fora do iframe (resolve Google OAuth) -->
+      <button class="btn secondary" id="kickLoginBtn" type="button">Login (Kick)</button>
+      <button class="btn secondary" id="reloadIframesBtn" type="button">Recarregar chats</button>
 
       <button class="btn secondary" id="tvBtn" type="button">Modo TV</button>
       <button class="btn secondary" id="soundBtn" type="button">Som: OFF</button>
@@ -220,7 +228,7 @@
     tabBtns.forEach(b=> b.classList.toggle("active", b.dataset.tab === name));
     tabLives.style.display = (name === "lives") ? "grid" : "none";
     tabFav.style.display   = (name === "favoritos") ? "grid" : "none";
-    if(name === "favoritos") refreshFavoritos(); // atualiza ao entrar
+    if(name === "favoritos") refreshFavoritos();
   }
   tabBtns.forEach(btn=> btn.addEventListener("click", ()=> setActiveTab(btn.dataset.tab)));
 
@@ -439,6 +447,18 @@
     refreshAll();
   });
 
+  // ✅ Login Kick fora do iframe (para Google aparecer)
+  document.getElementById("kickLoginBtn").addEventListener("click", ()=>{
+    window.open("https://kick.com/", "_blank", "noopener,noreferrer");
+    alert("Faça login no Kick na aba que abriu. Depois volte aqui e clique em 'Recarregar chats' (ou aperte F5).");
+  });
+
+  // ✅ Recarrega os iframes (útil após login)
+  document.getElementById("reloadIframesBtn").addEventListener("click", ()=>{
+    setIframesFor(1, LIVE_1);
+    if(HAS_LIVE_2) setIframesFor(2, LIVE_2);
+  });
+
   // ===== APIs =====
   async function fetchYouTubeTitle(videoId){
     const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
@@ -622,7 +642,6 @@
     openModal();
   }
 
-  // atualiza favoritos em loop também
   refreshFavoritos();
   setInterval(refreshFavoritos, REFRESH_EVERY_MS);
 </script>
