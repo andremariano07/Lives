@@ -57,6 +57,19 @@
   }
   .chipBtn:active{ transform:translateY(1px); }
 
+  .dangerBtn{
+    background:linear-gradient(180deg, #ff6b6b 0%, #ff3b3b 100%);
+    border:1px solid rgba(0,0,0,0.25);
+    color:#240000;
+    padding:6px 12px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:1000;
+    white-space:nowrap;
+    box-shadow:0 6px 14px rgba(0,0,0,0.35);
+  }
+  .dangerBtn:active{ transform:translateY(1px); }
+
   .liveBadge{ display:none; align-items:center; gap:6px; padding:6px 10px; border-radius:999px; background:rgba(0,0,0,0.30); color:#fff; font-weight:900; white-space:nowrap; border:1px solid rgba(0,0,0,0.20); }
   .liveBadge .dot{ width:10px; height:10px; border-radius:50%; background:var(--bad); box-shadow:0 0 0 0 rgba(255,43,43,0.7); animation:pulse 1.2s infinite; }
   @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(255,43,43,0.65);} 70%{box-shadow:0 0 0 10px rgba(255,43,43,0.0);} 100%{box-shadow:0 0 0 0 rgba(255,43,43,0.0);} }
@@ -166,6 +179,7 @@
           <button class="miniBtn" id="toggleChat1" type="button">Ocultar chat</button>
           <button class="chipBtn" id="openChat1" type="button">Chat (janela)</button>
           <button class="chipBtn" id="openLive1" type="button">Live (janela)</button>
+          <button class="dangerBtn" id="closeLive1" type="button">Fechar</button>
         </div>
       </div>
       <div class="content">
@@ -183,6 +197,7 @@
           <button class="miniBtn" id="toggleChat2" type="button">Ocultar chat</button>
           <button class="chipBtn" id="openChat2" type="button">Chat (janela)</button>
           <button class="chipBtn" id="openLive2" type="button">Live (janela)</button>
+          <button class="dangerBtn" id="closeLive2" type="button">Fechar</button>
         </div>
       </div>
       <div class="content">
@@ -423,15 +438,34 @@
 
   function applyLiveLayout(){
     const grid = document.getElementById("tab-lives");
-    if(HAS_LIVE_2){
-      panel2.style.display = "";
+
+    const has1 = !!LIVE_1;
+    const has2 = !!LIVE_2;
+    HAS_LIVE_2 = has2;
+
+    panel1.style.display = has1 ? "" : "none";
+    panel2.style.display = has2 ? "" : "none";
+
+    if(has1 && has2){
       grid.classList.remove("single-live");
     }else{
-      panel2.style.display = "none";
       grid.classList.add("single-live");
+    }
+
+    if(!has1){
+      document.getElementById("t1").innerText = "LIVE 1";
+      document.getElementById("v1").innerText = "👀 —";
+      setLiveBadge(1, false);
+      document.getElementById("vid1").src = "about:blank";
+      document.getElementById("chat1").src = "about:blank";
+    }
+
+    if(!has2){
       document.getElementById("t2").innerText = "LIVE 2";
       document.getElementById("v2").innerText = "👀 —";
       setLiveBadge(2, false);
+      document.getElementById("vid2").src = "about:blank";
+      document.getElementById("chat2").src = "about:blank";
     }
   }
 
@@ -469,12 +503,31 @@
   function setLives(l1, l2){
     LIVE_1 = l1 || null;
     LIVE_2 = l2 || null;
-    HAS_LIVE_2 = !!l2;
+    HAS_LIVE_2 = !!LIVE_2;
 
     setIframesFor(1, LIVE_1);
-    setIframesFor(2, HAS_LIVE_2 ? LIVE_2 : null);
+    setIframesFor(2, LIVE_2);
     applyLiveLayout();
   }
+
+  function closeLive(which){
+    if(which === 1){
+      if(LIVE_2){
+        LIVE_1 = LIVE_2;
+        LIVE_2 = null;
+      }else{
+        LIVE_1 = null;
+      }
+    }else if(which === 2){
+      LIVE_2 = null;
+    }
+
+    setLives(LIVE_1, LIVE_2);
+    refreshAll();
+  }
+
+  document.getElementById("closeLive1").addEventListener("click", ()=> closeLive(1));
+  document.getElementById("closeLive2").addEventListener("click", ()=> closeLive(2));
 
   function isSameLive(a, b){
     if(!a || !b) return false;
@@ -488,13 +541,13 @@
     if(!newLive) return;
 
     if(!LIVE_1){
-      setLives(newLive, HAS_LIVE_2 ? LIVE_2 : null);
+      setLives(newLive, LIVE_2);
       setActiveTab("lives");
       refreshAll();
       return;
     }
 
-    if(isSameLive(LIVE_1, newLive) || (HAS_LIVE_2 && isSameLive(LIVE_2, newLive))){
+    if(isSameLive(LIVE_1, newLive) || (LIVE_2 && isSameLive(LIVE_2, newLive))){
       setActiveTab("lives");
       refreshAll();
       return;
@@ -510,8 +563,15 @@
       return;
     }
 
-    if(HAS_LIVE_2 && live2IsYoutube){
+    if(LIVE_2 && live2IsYoutube){
       setLives(newLive, LIVE_2);
+      setActiveTab("lives");
+      refreshAll();
+      return;
+    }
+
+    if(!LIVE_2){
+      setLives(LIVE_1, newLive);
       setActiveTab("lives");
       refreshAll();
       return;
@@ -716,8 +776,8 @@
     try{
       status.innerText = "Atualizando…";
       await Promise.all([
-        refreshOne(1, LIVE_1),
-        HAS_LIVE_2 ? refreshOne(2, LIVE_2) : Promise.resolve()
+        LIVE_1 ? refreshOne(1, LIVE_1) : Promise.resolve(),
+        LIVE_2 ? refreshOne(2, LIVE_2) : Promise.resolve()
       ]);
       status.innerText = "Atualizado ✅";
     }catch(e){
