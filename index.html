@@ -9,7 +9,7 @@
   :root{
     --bg:#111; --panel:#000; --accent:#00bfff; --text:#fff; --muted:#bbb; --border:#222;
     --radius:12px; --ok:#00ff88; --bad:#ff2b2b;
-    --chatW: 340px; /* chat menor */
+    --chatW: 340px;
   }
   body { margin:0; background:var(--bg); font-family:Arial, sans-serif; color:var(--text); }
 
@@ -44,7 +44,6 @@
     white-space:nowrap;
   }
 
-  /* ✅ Botões estilo da imagem (azul “pílula”) */
   .chipBtn{
     background:linear-gradient(180deg, #1fb8ff 0%, #0aa0e6 100%);
     border:1px solid rgba(0,0,0,0.25);
@@ -62,14 +61,12 @@
   .liveBadge .dot{ width:10px; height:10px; border-radius:50%; background:var(--bad); box-shadow:0 0 0 0 rgba(255,43,43,0.7); animation:pulse 1.2s infinite; }
   @keyframes pulse{ 0%{box-shadow:0 0 0 0 rgba(255,43,43,0.65);} 70%{box-shadow:0 0 0 10px rgba(255,43,43,0.0);} 100%{box-shadow:0 0 0 0 rgba(255,43,43,0.0);} }
 
-  /* chat menor */
   .content{ display:grid; grid-template-columns:1fr var(--chatW); flex:1; min-height:0; }
   iframe{ width:100%; height:100%; border:0; }
   iframe.chat{ min-width:300px; }
   .chat-hidden .content{ grid-template-columns:1fr; }
   .chat-hidden iframe.chat{ display:none; }
 
-  /* Modal */
   .modalOverlay{ position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; padding:18px; z-index:9999; }
   .modal{ width:min(720px,100%); background:#0b0b0b; border:1px solid #2a2a2a; border-radius:18px; box-shadow:0 16px 50px rgba(0,0,0,0.6); overflow:hidden; }
   .modalHeader{ padding:14px 16px; background:#0f0f0f; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center; gap:10px; }
@@ -80,7 +77,6 @@
   .hint{ color:#9c9c9c; font-size:12px; line-height:1.35; }
   .modalFooter{ padding:14px 16px; border-top:1px solid #222; display:flex; justify-content:flex-end; gap:10px; }
 
-  /* ✅ Notificação (canto superior direito) */
   .toastWrap{
     position:fixed;
     top:14px;
@@ -112,14 +108,12 @@
     color:#fff; padding:6px 10px; border-radius:999px; cursor:pointer; font-weight:900; font-size:12px;
   }
 
-  /* TV */
   body.tv #topbar{ padding:8px 10px; }
   body.tv #status{ display:none; }
   body.tv .grid{ padding:8px; gap:8px; height:calc(100vh - 52px); }
   body.tv .title{ padding:10px 12px; font-size:15px; }
   body.tv .pill, body.tv .miniBtn, body.tv .liveBadge{ padding:8px 12px; font-size:14px; }
 
-  /* Favoritos */
   .favWrap{ border:2px solid var(--accent); border-radius:var(--radius); background:var(--panel); overflow:hidden; display:flex; flex-direction:column; min-height:0; grid-column:1/-1; }
   .favBody{ padding:14px; display:grid; gap:10px; }
   .favRow{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px; border-radius:14px; border:1px solid #2a2a2a; background:#101010; }
@@ -155,7 +149,6 @@
       <button class="btn secondary tabBtn active" data-tab="lives" type="button">🎥 Lives</button>
       <button class="btn secondary tabBtn" data-tab="favoritos" type="button">⭐ Favoritos</button>
 
-      <!-- ✅ removido: Abrir Kick (login) / Som / etc (como você pediu tirar esses botões) -->
       <button class="btn secondary" id="tvBtn" type="button">Modo TV</button>
 
       <div id="status">Carregando…</div>
@@ -163,7 +156,6 @@
     <div id="clock">00:00:00</div>
   </div>
 
-  <!-- TAB LIVES -->
   <div id="tab-lives" class="grid">
     <div class="panel" id="panel1">
       <div class="title">
@@ -172,7 +164,6 @@
           <div class="liveBadge" id="live1Badge"><span class="dot"></span>AO VIVO</div>
           <div class="pill" id="v1">👀 —</div>
           <button class="miniBtn" id="toggleChat1" type="button">Ocultar chat</button>
-          <!-- ✅ novo estilo -->
           <button class="chipBtn" id="openChat1" type="button">Chat (janela)</button>
           <button class="chipBtn" id="openLive1" type="button">Live (janela)</button>
         </div>
@@ -190,7 +181,6 @@
           <div class="liveBadge" id="live2Badge"><span class="dot"></span>AO VIVO</div>
           <div class="pill" id="v2">👀 —</div>
           <button class="miniBtn" id="toggleChat2" type="button">Ocultar chat</button>
-          <!-- ✅ novo estilo -->
           <button class="chipBtn" id="openChat2" type="button">Chat (janela)</button>
           <button class="chipBtn" id="openLive2" type="button">Live (janela)</button>
         </div>
@@ -202,7 +192,6 @@
     </div>
   </div>
 
-  <!-- TAB FAVORITOS -->
   <div id="tab-favoritos" class="grid" style="display:none;">
     <div class="favWrap">
       <div class="title">
@@ -215,10 +204,8 @@
     </div>
   </div>
 
-  <!-- Toast container (canto superior direito) -->
   <div class="toastWrap" id="toastWrap" aria-live="polite" aria-atomic="true"></div>
 
-  <!-- Modal -->
   <div class="modalOverlay" id="modalOverlay" style="display:none;">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <div class="modalHeader">
@@ -248,12 +235,9 @@
   </div>
 
 <script>
-  // ===== CONFIG =====
   const YOUTUBE_API_KEY = "AIzaSyBH9rhx0JLh1fwhBSxPsi0L1QoTmZa0OKU";
   const EMBED_DOMAIN = "andremariano07.github.io";
   const REFRESH_EVERY_MS = 15000;
-
-  // ✅ seu worker
   const KICK_PROXY_BASE = "https://tiny-moon-2739.andrekratos.workers.dev";
 
   const FAVORITOS = [
@@ -262,12 +246,10 @@
     { label: "gaules",  url: "https://kick.com/gaules" }
   ];
 
-  // ===== Notificação quando ficar AO VIVO =====
   const NOTIFY_ON_ONLINE = true;
   const NOTIFY_COOLDOWN_MS = 12000;
   const LS_NOTIFY_KEY = "painelLives.notifyState.v2";
 
-  // ===== RELÓGIO =====
   function updateClock(){
     const now = new Date();
     const h = String(now.getHours()).padStart(2,'0');
@@ -275,9 +257,9 @@
     const s = String(now.getSeconds()).padStart(2,'0');
     document.getElementById('clock').innerText = `${h}:${m}:${s}`;
   }
-  setInterval(updateClock, 1000); updateClock();
+  setInterval(updateClock, 1000);
+  updateClock();
 
-  // ===== TABS =====
   const tabBtns = document.querySelectorAll(".tabBtn");
   const tabLives = document.getElementById("tab-lives");
   const tabFav   = document.getElementById("tab-favoritos");
@@ -290,7 +272,6 @@
   }
   tabBtns.forEach(btn=> btn.addEventListener("click", ()=> setActiveTab(btn.dataset.tab)));
 
-  // ===== TV MODE =====
   const tvBtn = document.getElementById("tvBtn");
   function isFullscreen(){ return !!document.fullscreenElement; }
   async function toggleTV(){
@@ -304,7 +285,6 @@
   }
   tvBtn.addEventListener("click", toggleTV);
 
-  // ===== Toast (canto superior direito) =====
   const toastWrap = document.getElementById("toastWrap");
 
   function escapeHtml(s){
@@ -341,7 +321,6 @@
     setTimeout(()=>{ if(el.isConnected) el.remove(); }, ttl);
   }
 
-  // ===== Parse links =====
   function extractYouTubeId(input){
     if(!input) return null;
     const s = input.trim();
@@ -396,7 +375,6 @@
     return null;
   }
 
-  // ===== Modal =====
   const modalOverlay = document.getElementById("modalOverlay");
   const liveUrl1Input = document.getElementById("liveUrl1");
   const liveUrl2Input = document.getElementById("liveUrl2");
@@ -419,10 +397,11 @@
   modalOverlay.addEventListener("click", (e)=>{ if(e.target === modalOverlay) closeModal(); });
 
   document.getElementById("clearSavedBtn").addEventListener("click", ()=>{
-    clearSavedLinks(); liveUrl1Input.value=""; liveUrl2Input.value="";
+    clearSavedLinks();
+    liveUrl1Input.value="";
+    liveUrl2Input.value="";
   });
 
-  // ===== Chat toggle =====
   function setChatHidden(panelEl, btnEl, hidden){
     panelEl.classList.toggle("chat-hidden", hidden);
     btnEl.textContent = hidden ? "Mostrar chat" : "Ocultar chat";
@@ -438,7 +417,6 @@
   toggleChat1.addEventListener("click", ()=> setChatHidden(panel1, toggleChat1, !panel1.classList.contains("chat-hidden")));
   toggleChat2.addEventListener("click", ()=> setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden")));
 
-  // ===== Lives (2 painéis) =====
   let LIVE_1 = { provider:"youtube", id:"N0lqE1yAduE" };
   let LIVE_2 = { provider:"youtube", id:"w2wQeZ1L1Mo" };
   let HAS_LIVE_2 = true;
@@ -466,7 +444,11 @@
     const vid = document.getElementById(which === 1 ? "vid1" : "vid2");
     const chat = document.getElementById(which === 1 ? "chat1" : "chat2");
 
-    if(!live){ vid.src="about:blank"; chat.src="about:blank"; return; }
+    if(!live){
+      vid.src="about:blank";
+      chat.src="about:blank";
+      return;
+    }
 
     if(live.provider === "youtube"){
       vid.src = `https://www.youtube.com/embed/${live.id}`;
@@ -475,18 +457,18 @@
     }
 
     if(live.provider === "kick"){
-      // iframe pode ficar deslogado, então você usa "Chat (janela)"
       vid.src = `https://player.kick.com/${encodeURIComponent(live.username)}?autoplay=false&muted=false`;
       chat.src = `https://kick.com/popout/${encodeURIComponent(live.username)}/chat`;
       return;
     }
 
-    vid.src="about:blank"; chat.src="about:blank";
+    vid.src="about:blank";
+    chat.src="about:blank";
   }
 
   function setLives(l1, l2){
-    LIVE_1 = l1;
-    LIVE_2 = l2 || LIVE_2;
+    LIVE_1 = l1 || null;
+    LIVE_2 = l2 || null;
     HAS_LIVE_2 = !!l2;
 
     setIframesFor(1, LIVE_1);
@@ -494,12 +476,64 @@
     applyLiveLayout();
   }
 
+  function isSameLive(a, b){
+    if(!a || !b) return false;
+    if(a.provider !== b.provider) return false;
+    if(a.provider === "youtube") return a.id === b.id;
+    if(a.provider === "kick") return a.username === b.username;
+    return false;
+  }
+
+  function openLiveSplit(newLive){
+    if(!newLive) return;
+
+    if(!LIVE_1){
+      setLives(newLive, HAS_LIVE_2 ? LIVE_2 : null);
+      setActiveTab("lives");
+      refreshAll();
+      return;
+    }
+
+    if(isSameLive(LIVE_1, newLive) || (HAS_LIVE_2 && isSameLive(LIVE_2, newLive))){
+      setActiveTab("lives");
+      refreshAll();
+      return;
+    }
+
+    const live1IsYoutube = LIVE_1?.provider === "youtube";
+    const live2IsYoutube = LIVE_2?.provider === "youtube";
+
+    if(live1IsYoutube){
+      setLives(LIVE_1, newLive);
+      setActiveTab("lives");
+      refreshAll();
+      return;
+    }
+
+    if(HAS_LIVE_2 && live2IsYoutube){
+      setLives(newLive, LIVE_2);
+      setActiveTab("lives");
+      refreshAll();
+      return;
+    }
+
+    setLives(LIVE_1, newLive);
+    setActiveTab("lives");
+    refreshAll();
+  }
+
   document.getElementById("saveLinksBtn").addEventListener("click", ()=>{
     const l1 = parseLiveInput(liveUrl1Input.value.trim());
     const l2 = liveUrl2Input.value.trim() ? parseLiveInput(liveUrl2Input.value.trim()) : null;
 
-    if(!l1){ alert("Cole um link válido para a Live 1 (YouTube ou Kick)."); return; }
-    if(liveUrl2Input.value.trim() && !l2){ alert("Link da Live 2 inválido."); return; }
+    if(!l1){
+      alert("Cole um link válido para a Live 1 (YouTube ou Kick).");
+      return;
+    }
+    if(liveUrl2Input.value.trim() && !l2){
+      alert("Link da Live 2 inválido.");
+      return;
+    }
 
     saveLinks(liveUrl1Input.value.trim(), liveUrl2Input.value.trim());
     setLives(l1, l2);
@@ -508,17 +542,25 @@
     refreshAll();
   });
 
-  // ===== Botões "Chat (janela)" e "Live (janela)" =====
   function openKickChatWindow(live){
-    if(!live || live.provider !== "kick") { alert("Esta live não é do Kick."); return; }
+    if(!live || live.provider !== "kick") {
+      alert("Esta live não é do Kick.");
+      return;
+    }
     window.open(`https://kick.com/popout/${encodeURIComponent(live.username)}/chat`, "_blank", "noopener,noreferrer");
   }
   function openKickLiveWindow(live){
-    if(!live || live.provider !== "kick") { alert("Esta live não é do Kick."); return; }
+    if(!live || live.provider !== "kick") {
+      alert("Esta live não é do Kick.");
+      return;
+    }
     window.open(`https://kick.com/${encodeURIComponent(live.username)}`, "_blank", "noopener,noreferrer");
   }
   function openYouTubeLiveWindow(live){
-    if(!live || live.provider !== "youtube") { alert("Esta live não é do YouTube."); return; }
+    if(!live || live.provider !== "youtube") {
+      alert("Esta live não é do YouTube.");
+      return;
+    }
     window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(live.id)}`, "_blank", "noopener,noreferrer");
   }
 
@@ -536,7 +578,6 @@
     else alert("Sem live carregada.");
   });
 
-  // ===== APIs =====
   async function fetchYouTubeTitle(videoId){
     const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
     const res = await fetch(url);
@@ -569,7 +610,6 @@
     return `👀 ${Number(n).toLocaleString("pt-BR")}`;
   }
 
-  // ===== Notificação: quando ficar AO VIVO =====
   function loadNotifyState(){
     try{
       const raw = localStorage.getItem(LS_NOTIFY_KEY);
@@ -611,7 +651,6 @@
     saveNotifyState(notifyState);
   }
 
-  // ===== Refresh lives =====
   async function refreshOne(which, live){
     const titleEl = document.getElementById(which === 1 ? "t1" : "t2");
     const viewersEl = document.getElementById(which === 1 ? "v1" : "v2");
@@ -650,7 +689,6 @@
       return;
     }
 
-    // youtube
     const title = await fetchYouTubeTitle(live.id);
     titleEl.innerText = title;
     const info = await fetchYouTubeLiveInfo(live.id);
@@ -687,7 +725,6 @@
     }
   }
 
-  // ===== Favoritos =====
   function avatarFallbackLetter(user){
     return (user || "K").slice(0,1).toUpperCase();
   }
@@ -748,14 +785,11 @@
       el.querySelector(".favOpen").addEventListener("click", ()=>{
         const live = parseLiveInput(row.url);
         if(!live) return;
-        setLives(live, null);
-        setActiveTab("lives");
-        refreshAll();
+        openLiveSplit(live);
       });
 
       list.appendChild(el);
 
-      // notifica quando favorito ficar ao vivo
       if(isLive){
         maybeNotifyOnline({
           provider: "kick",
@@ -775,7 +809,6 @@
     favStatus.innerText = "Atualizado ✅";
   }
 
-  // ===== INIT =====
   const saved = loadSavedLinks();
   if(saved?.url1){
     const l1 = parseLiveInput(saved.url1);
