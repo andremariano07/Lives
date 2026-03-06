@@ -37,15 +37,9 @@
     padding:10px 14px;
     border-bottom:1px solid var(--border);
     gap:12px;
-    transition:opacity .28s ease, transform .28s ease;
     position:relative;
-    z-index:20;
-  }
-
-  body.lives-single-active.topbar-hidden #topbar{
-    opacity:0;
-    transform:translateY(-100%);
-    pointer-events:none;
+    z-index:50;
+    background:#111;
   }
 
   #leftTop{
@@ -108,12 +102,6 @@
     grid-template-columns:1fr;
   }
 
-  #tab-lives.lives-single-layout{
-    height:100vh;
-    padding:0;
-    gap:0;
-  }
-
   .panel{
     border:2px solid var(--accent);
     border-radius:var(--radius);
@@ -123,11 +111,6 @@
     flex-direction:column;
     min-height:0;
     position:relative;
-  }
-
-  #tab-lives.lives-single-layout .panel{
-    border-radius:0;
-    border-width:0;
   }
 
   .title{
@@ -540,12 +523,6 @@
     }
 
     .panel{ min-height:60vh; }
-
-    #tab-lives.lives-single-layout{
-      min-height:100vh;
-      height:100vh;
-    }
-
     #status{ max-width:70vw; }
   }
 </style>
@@ -629,7 +606,7 @@
         <div class="hint">
           YouTube: cole link de <b>watch?v=</b> ou <b>youtu.be/</b>.<br>
           Kick: cole link do canal <b>https://kick.com/USUARIO</b>.<br>
-          Os links e estados ficam salvos no navegador.
+          Os links ficam salvos no navegador.
         </div>
       </div>
       <div class="modalFooter">
@@ -645,8 +622,7 @@
   const REFRESH_EVERY_MS = 15000;
   const KICK_PROXY_BASE = "https://tiny-moon-2739.andrekratos.workers.dev";
   const SINGLE_LIVE_HIDE_DELAY = 2200;
-  const LS_KEY = "painelLives.links.v9";
-  const LS_UI_KEY = "painelLives.ui.v3";
+  const LS_KEY = "painelLives.links.v10";
   const LS_NOTIFY_KEY = "painelLives.notifyState.v2";
 
   const FAVORITOS = [
@@ -694,49 +670,31 @@
   setInterval(updateClock, 1000);
   updateClock();
 
-  function saveLinks(url1, url2){
-    localStorage.setItem(LS_KEY, JSON.stringify({ url1, url2 }));
+  function setActiveTab(name){
+    tabBtns.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+    tabLives.style.display = name === "lives" ? "grid" : "none";
+    tabFav.style.display = name === "favoritos" ? "grid" : "none";
+    if(name === "favoritos") refreshFavoritos();
+    updateSingleLiveMode();
   }
 
-  function loadSavedLinks(){
+  tabBtns.forEach(btn => btn.addEventListener("click", ()=> setActiveTab(btn.dataset.tab)));
+
+  function isFullscreen(){
+    return !!document.fullscreenElement;
+  }
+
+  async function toggleTV(){
+    document.body.classList.toggle("tv");
+    const on = document.body.classList.contains("tv");
+    tvBtn.textContent = on ? "Sair TV" : "Modo TV";
     try{
-      const raw = localStorage.getItem(LS_KEY);
-      return raw ? JSON.parse(raw) : null;
-    }catch{
-      return null;
-    }
+      if(on && !isFullscreen()) await document.documentElement.requestFullscreen();
+      else if(!on && isFullscreen()) await document.exitFullscreen();
+    }catch(e){}
   }
 
-  function clearSavedLinks(){
-    localStorage.removeItem(LS_KEY);
-  }
-
-  function loadUIState(){
-    try{
-      return JSON.parse(localStorage.getItem(LS_UI_KEY)) || {};
-    }catch{
-      return {};
-    }
-  }
-
-  function saveUIState(next = {}){
-    const current = loadUIState();
-    localStorage.setItem(LS_UI_KEY, JSON.stringify({ ...current, ...next }));
-  }
-
-  function loadNotifyState(){
-    try{
-      return JSON.parse(localStorage.getItem(LS_NOTIFY_KEY)) || { kick:{}, yt:{}, lastToastAt:0 };
-    }catch{
-      return { kick:{}, yt:{}, lastToastAt:0 };
-    }
-  }
-
-  function saveNotifyState(state){
-    localStorage.setItem(LS_NOTIFY_KEY, JSON.stringify(state));
-  }
-
-  const notifyState = loadNotifyState();
+  tvBtn.addEventListener("click", toggleTV);
 
   function showToast({title, text, actions=[]}, ttl=10000){
     const el = document.createElement("div");
@@ -825,39 +783,22 @@
     return null;
   }
 
-  function setActiveTab(name){
-    tabBtns.forEach(b => b.classList.toggle("active", b.dataset.tab === name));
-    tabLives.style.display = name === "lives" ? "grid" : "none";
-    tabFav.style.display = name === "favoritos" ? "grid" : "none";
-    saveUIState({ activeTab:name });
+  function saveLinks(url1, url2){
+    localStorage.setItem(LS_KEY, JSON.stringify({ url1, url2 }));
+  }
 
-    if(name === "favoritos"){
-      document.body.classList.remove("topbar-hidden");
-      refreshFavoritos();
-    }else{
-      updateSingleLiveMode();
+  function loadSavedLinks(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      return raw ? JSON.parse(raw) : null;
+    }catch{
+      return null;
     }
   }
 
-  tabBtns.forEach(btn => btn.addEventListener("click", ()=> setActiveTab(btn.dataset.tab)));
-
-  function isFullscreen(){
-    return !!document.fullscreenElement;
+  function clearSavedLinks(){
+    localStorage.removeItem(LS_KEY);
   }
-
-  async function toggleTV(force){
-    const next = typeof force === "boolean" ? force : !document.body.classList.contains("tv");
-    document.body.classList.toggle("tv", next);
-    tvBtn.textContent = next ? "Sair TV" : "Modo TV";
-    saveUIState({ tvMode: next });
-
-    try{
-      if(next && !isFullscreen()) await document.documentElement.requestFullscreen();
-      else if(!next && isFullscreen()) await document.exitFullscreen();
-    }catch{}
-  }
-
-  tvBtn.addEventListener("click", ()=> toggleTV());
 
   function openModal(){
     const saved = loadSavedLinks();
@@ -883,19 +824,22 @@
     liveUrl2Input.value = "";
   });
 
-  function setChatHidden(panelEl, btnEl, hidden, persistKey){
+  function setChatHidden(panelEl, btnEl, hidden){
     panelEl.classList.toggle("chat-hidden", hidden);
     btnEl.textContent = hidden ? "Mostrar chat" : "Ocultar chat";
     btnEl.setAttribute("aria-pressed", hidden ? "true" : "false");
-    if(persistKey) saveUIState({ [persistKey]: hidden });
   }
 
-  toggleChat1.addEventListener("click", ()=> setChatHidden(panel1, toggleChat1, !panel1.classList.contains("chat-hidden"), "chat1Hidden"));
-  toggleChat2.addEventListener("click", ()=> setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden"), "chat2Hidden"));
+  toggleChat1.addEventListener("click", ()=> setChatHidden(panel1, toggleChat1, !panel1.classList.contains("chat-hidden")));
+  toggleChat2.addEventListener("click", ()=> setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden")));
 
   function setLiveBadge(which, isLive){
     const el = document.getElementById(which === 1 ? "live1Badge" : "live2Badge");
     el.style.display = isLive ? "inline-flex" : "none";
+  }
+
+  function visiblePanels(){
+    return [panel1, panel2].filter(p => p.style.display !== "none");
   }
 
   function clearSingleLiveTimer(){
@@ -905,61 +849,25 @@
     }
   }
 
-  function visiblePanels(){
-    return [panel1, panel2].filter(p => p.style.display !== "none");
-  }
-
-  function isLivesTabActive(){
-    return tabLives.style.display !== "none";
-  }
-
   function singleLiveActive(){
-    return isLivesTabActive() && visiblePanels().length === 1;
+    return tabLives.style.display !== "none" && visiblePanels().length === 1;
   }
 
-  function revealSingleLiveUI(){
+  function revealSingleLiveControls(){
     if(!singleLiveActive()) return;
     const panel = visiblePanels()[0];
     panel.classList.add("show-controls");
-    document.body.classList.remove("topbar-hidden");
     clearSingleLiveTimer();
 
     singleLiveHideTimer = setTimeout(()=>{
       if(singleLiveActive()){
         panel.classList.remove("show-controls");
-        document.body.classList.add("topbar-hidden");
       }
     }, SINGLE_LIVE_HIDE_DELAY);
   }
 
-  function attachSingleLiveUX(panel){
-    const activate = e => {
-      if(!singleLiveActive()) return;
-
-      if(e.type === "mousemove"){
-        const rect = panel.getBoundingClientRect();
-        const y = e.clientY - rect.top;
-        if(y <= 100 || !document.body.classList.contains("topbar-hidden")){
-          revealSingleLiveUI();
-        }
-      }else{
-        revealSingleLiveUI();
-      }
-    };
-
-    panel.addEventListener("mousemove", activate);
-    panel.addEventListener("mouseenter", activate);
-    panel.addEventListener("click", activate);
-  }
-
-  attachSingleLiveUX(panel1);
-  attachSingleLiveUX(panel2);
-
   function updateSingleLiveMode(){
     const active = singleLiveActive();
-
-    document.body.classList.toggle("lives-single-active", active);
-    tabLives.classList.toggle("lives-single-layout", active);
 
     [panel1, panel2].forEach(p=>{
       p.classList.remove("single-overlay", "show-controls");
@@ -967,16 +875,22 @@
 
     clearSingleLiveTimer();
 
-    if(!active){
-      document.body.classList.remove("topbar-hidden");
-      return;
-    }
+    if(!active) return;
 
     const panel = visiblePanels()[0];
     panel.classList.add("single-overlay", "show-controls");
-    document.body.classList.remove("topbar-hidden");
-    revealSingleLiveUI();
+    revealSingleLiveControls();
   }
+
+  function attachSingleLiveUX(panel){
+    const activate = ()=> revealSingleLiveControls();
+    panel.addEventListener("mousemove", activate);
+    panel.addEventListener("mouseenter", activate);
+    panel.addEventListener("click", activate);
+  }
+
+  attachSingleLiveUX(panel1);
+  attachSingleLiveUX(panel2);
 
   function setIframesFor(which, live){
     const vid = document.getElementById(which === 1 ? "vid1" : "vid2");
@@ -1166,6 +1080,20 @@
     return `👀 ${Number(n).toLocaleString("pt-BR")}`;
   }
 
+  function loadNotifyState(){
+    try{
+      return JSON.parse(localStorage.getItem(LS_NOTIFY_KEY)) || { kick:{}, yt:{}, lastToastAt:0 };
+    }catch{
+      return { kick:{}, yt:{}, lastToastAt:0 };
+    }
+  }
+
+  function saveNotifyState(state){
+    localStorage.setItem(LS_NOTIFY_KEY, JSON.stringify(state));
+  }
+
+  const notifyState = loadNotifyState();
+
   function markOffline(provider, key){
     if(provider === "kick") delete notifyState.kick[key];
     else delete notifyState.yt[key];
@@ -1345,56 +1273,6 @@
     favStatus.innerText = "Atualizado ✅";
   }
 
-  document.addEventListener("mousemove", e=>{
-    if(!singleLiveActive()) return;
-    if(e.clientY <= 18) revealSingleLiveUI();
-  });
-
-  document.addEventListener("keydown", e=>{
-    if(["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-    const key = e.key.toLowerCase();
-
-    if(key === "f"){
-      e.preventDefault();
-      toggleTV();
-    }
-
-    if(key === "escape" && document.body.classList.contains("tv")){
-      e.preventDefault();
-      toggleTV(false);
-    }
-
-    if(key === "1"){
-      e.preventDefault();
-      if(panel1.style.display !== "none"){
-        setChatHidden(panel1, toggleChat1, !panel1.classList.contains("chat-hidden"), "chat1Hidden");
-        revealSingleLiveUI();
-      }
-    }
-
-    if(key === "2"){
-      e.preventDefault();
-      if(panel2.style.display !== "none"){
-        setChatHidden(panel2, toggleChat2, !panel2.classList.contains("chat-hidden"), "chat2Hidden");
-        revealSingleLiveUI();
-      }
-    }
-
-    if(key === "x"){
-      e.preventDefault();
-      if(singleLiveActive()){
-        if(panel1.style.display !== "none") closeLive(1);
-        else if(panel2.style.display !== "none") closeLive(2);
-      }
-    }
-  });
-
-  const savedUI = loadUIState();
-  setActiveTab(savedUI.activeTab || "lives");
-  setChatHidden(panel1, toggleChat1, !!savedUI.chat1Hidden);
-  setChatHidden(panel2, toggleChat2, !!savedUI.chat2Hidden);
-  if(savedUI.tvMode) toggleTV(true);
-
   const saved = loadSavedLinks();
   if(saved?.url1){
     const l1 = parseLiveInput(saved.url1);
@@ -1410,6 +1288,7 @@
     openModal();
   }
 
+  setActiveTab("lives");
   refreshFavoritos();
 
   setInterval(()=>{
