@@ -10,7 +10,6 @@
     --bg:#111;
     --panel:#000;
     --accent:#d8d8d8;
-    --accent-2:#bdbdbd;
     --accent-text:#111;
     --text:#fff;
     --muted:#bbb;
@@ -43,7 +42,7 @@
     z-index:20;
   }
 
-  body.single-live-mode.topbar-hidden #topbar{
+  body.lives-single-active.topbar-hidden #topbar{
     opacity:0;
     transform:translateY(-100%);
     pointer-events:none;
@@ -109,7 +108,7 @@
     grid-template-columns:1fr;
   }
 
-  body.single-live-mode .grid{
+  #tab-lives.lives-single-layout{
     height:100vh;
     padding:0;
     gap:0;
@@ -126,7 +125,7 @@
     position:relative;
   }
 
-  body.single-live-mode .panel{
+  #tab-lives.lives-single-layout .panel{
     border-radius:0;
     border-width:0;
   }
@@ -398,11 +397,6 @@
     font-size:12px;
   }
 
-  body.tv #topbar{ padding:8px 10px; }
-  body.tv #status{ display:none; }
-  body.tv .title{ padding:10px 12px; font-size:15px; }
-  body.tv .pill, body.tv .miniBtn, body.tv .liveBadge{ padding:8px 12px; font-size:14px; }
-
   .favWrap{
     border:2px solid var(--accent);
     border-radius:var(--radius);
@@ -418,6 +412,7 @@
     padding:14px;
     display:grid;
     gap:10px;
+    overflow:auto;
   }
 
   .favRow{
@@ -545,12 +540,13 @@
     }
 
     .panel{ min-height:60vh; }
-    #status{ max-width:70vw; }
 
-    body.single-live-mode .grid{
+    #tab-lives.lives-single-layout{
       min-height:100vh;
       height:100vh;
     }
+
+    #status{ max-width:70vw; }
   }
 </style>
 </head>
@@ -649,8 +645,8 @@
   const REFRESH_EVERY_MS = 15000;
   const KICK_PROXY_BASE = "https://tiny-moon-2739.andrekratos.workers.dev";
   const SINGLE_LIVE_HIDE_DELAY = 2200;
-  const LS_KEY = "painelLives.links.v8";
-  const LS_UI_KEY = "painelLives.ui.v2";
+  const LS_KEY = "painelLives.links.v9";
+  const LS_UI_KEY = "painelLives.ui.v3";
   const LS_NOTIFY_KEY = "painelLives.notifyState.v2";
 
   const FAVORITOS = [
@@ -834,7 +830,13 @@
     tabLives.style.display = name === "lives" ? "grid" : "none";
     tabFav.style.display = name === "favoritos" ? "grid" : "none";
     saveUIState({ activeTab:name });
-    if(name === "favoritos") refreshFavoritos();
+
+    if(name === "favoritos"){
+      document.body.classList.remove("topbar-hidden");
+      refreshFavoritos();
+    }else{
+      updateSingleLiveMode();
+    }
   }
 
   tabBtns.forEach(btn => btn.addEventListener("click", ()=> setActiveTab(btn.dataset.tab)));
@@ -907,18 +909,21 @@
     return [panel1, panel2].filter(p => p.style.display !== "none");
   }
 
+  function isLivesTabActive(){
+    return tabLives.style.display !== "none";
+  }
+
   function singleLiveActive(){
-    return visiblePanels().length === 1;
+    return isLivesTabActive() && visiblePanels().length === 1;
   }
 
   function revealSingleLiveUI(){
     if(!singleLiveActive()) return;
-
     const panel = visiblePanels()[0];
     panel.classList.add("show-controls");
     document.body.classList.remove("topbar-hidden");
-
     clearSingleLiveTimer();
+
     singleLiveHideTimer = setTimeout(()=>{
       if(singleLiveActive()){
         panel.classList.remove("show-controls");
@@ -929,6 +934,8 @@
 
   function attachSingleLiveUX(panel){
     const activate = e => {
+      if(!singleLiveActive()) return;
+
       if(e.type === "mousemove"){
         const rect = panel.getBoundingClientRect();
         const y = e.clientY - rect.top;
@@ -945,33 +952,31 @@
     panel.addEventListener("click", activate);
   }
 
-  function setupSingleLiveBehavior(){
+  attachSingleLiveUX(panel1);
+  attachSingleLiveUX(panel2);
+
+  function updateSingleLiveMode(){
+    const active = singleLiveActive();
+
+    document.body.classList.toggle("lives-single-active", active);
+    tabLives.classList.toggle("lives-single-layout", active);
+
     [panel1, panel2].forEach(p=>{
       p.classList.remove("single-overlay", "show-controls");
-      const clone = p.cloneNode(true);
-      if (p._listenersAttached) return;
     });
 
-    document.body.classList.toggle("single-live-mode", singleLiveActive());
+    clearSingleLiveTimer();
 
-    if(!singleLiveActive()){
+    if(!active){
       document.body.classList.remove("topbar-hidden");
-      clearSingleLiveTimer();
-      [panel1, panel2].forEach(panel=>{
-        panel.classList.remove("single-overlay", "show-controls");
-      });
       return;
     }
 
     const panel = visiblePanels()[0];
     panel.classList.add("single-overlay", "show-controls");
     document.body.classList.remove("topbar-hidden");
-    clearSingleLiveTimer();
     revealSingleLiveUI();
   }
-
-  attachSingleLiveUX(panel1);
-  attachSingleLiveUX(panel2);
 
   function setIframesFor(which, live){
     const vid = document.getElementById(which === 1 ? "vid1" : "vid2");
@@ -1024,7 +1029,7 @@
       document.getElementById("chat2").src = "about:blank";
     }
 
-    setupSingleLiveBehavior();
+    updateSingleLiveMode();
   }
 
   function setLives(l1, l2){
@@ -1347,7 +1352,6 @@
 
   document.addEventListener("keydown", e=>{
     if(["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-
     const key = e.key.toLowerCase();
 
     if(key === "f"){
