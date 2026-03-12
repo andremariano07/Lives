@@ -626,11 +626,11 @@
   const LS_NOTIFY_KEY = "painelLives.notifyState.v2";
 
   const FAVORITOS = [
-    { label: "osusto",  url: "https://kick.com/osusto" },
+    { label: "osusto", url: "https://kick.com/osusto" },
     { label: "fusion88", url: "https://kick.com/fusion88" },
-    { label: "gaules",  url: "https://kick.com/gaules" }
-    { label: "roonald",  url: "https://kick.com/roonald" } 
-    { label: "caioba",  url: "https://kick.com/caioba" }
+    { label: "gaules", url: "https://kick.com/gaules" },
+    { label: "roonald", url: "https://kick.com/roonald" },
+    { label: "caioba", url: "https://kick.com/caioba" }
   ];
 
   const NOTIFY_ON_ONLINE = true;
@@ -1078,7 +1078,7 @@
   }
 
   function fmtViewers(n){
-    if(n === null || n === undefined) return "👀 —";
+    if(n === null || n === undefined || Number.isNaN(Number(n))) return "👀 —";
     return `👀 ${Number(n).toLocaleString("pt-BR")}`;
   }
 
@@ -1133,53 +1133,60 @@
       return;
     }
 
-    if(live.provider === "kick"){
-      const info = await fetchKickInfo(live.username);
-      const title = info?.title || `KICK: ${live.username}`;
-      const viewers = info?.viewers ?? null;
-      const isLive = !!info?.isLive;
+    try{
+      if(live.provider === "kick"){
+        const info = await fetchKickInfo(live.username);
+        const title = info?.title || `KICK: ${live.username}`;
+        const viewers = info?.viewers ?? null;
+        const isLive = !!info?.isLive;
 
+        titleEl.innerText = title;
+        viewersEl.innerText = fmtViewers(viewers);
+        setLiveBadge(which, isLive);
+
+        if(isLive){
+          maybeNotifyOnline({
+            provider:"kick",
+            key:live.username,
+            line1:live.username,
+            line2:title,
+            actions:[
+              { label:"Abrir Live", onClick:()=> window.open(`https://kick.com/${encodeURIComponent(live.username)}`, "_blank", "noopener,noreferrer") },
+              { label:"Abrir Chat", onClick:()=> window.open(`https://kick.com/popout/${encodeURIComponent(live.username)}/chat`, "_blank", "noopener,noreferrer") }
+            ]
+          });
+        }else{
+          markOffline("kick", live.username);
+        }
+        return;
+      }
+
+      const title = await fetchYouTubeTitle(live.id);
       titleEl.innerText = title;
-      viewersEl.innerText = fmtViewers(viewers);
+
+      const info = await fetchYouTubeLiveInfo(live.id);
+      const isLive = !!info?.isLive;
+      viewersEl.innerText = fmtViewers(info?.viewers ?? null);
       setLiveBadge(which, isLive);
 
       if(isLive){
         maybeNotifyOnline({
-          provider:"kick",
-          key:live.username,
-          line1:live.username,
+          provider:"youtube",
+          key:live.id,
+          line1:"YouTube",
           line2:title,
           actions:[
-            { label:"Abrir Live", onClick:()=> window.open(`https://kick.com/${encodeURIComponent(live.username)}`, "_blank", "noopener,noreferrer") },
-            { label:"Abrir Chat", onClick:()=> window.open(`https://kick.com/popout/${encodeURIComponent(live.username)}/chat`, "_blank", "noopener,noreferrer") }
+            { label:"Abrir Live", onClick:()=> window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(live.id)}`, "_blank", "noopener,noreferrer") }
           ]
         });
       }else{
-        markOffline("kick", live.username);
+        markOffline("youtube", live.id);
       }
-      return;
-    }
-
-    const title = await fetchYouTubeTitle(live.id);
-    titleEl.innerText = title;
-
-    const info = await fetchYouTubeLiveInfo(live.id);
-    const isLive = !!info?.isLive;
-    viewersEl.innerText = fmtViewers(info?.viewers ?? null);
-    setLiveBadge(which, isLive);
-
-    if(isLive){
-      maybeNotifyOnline({
-        provider:"youtube",
-        key:live.id,
-        line1:"YouTube",
-        line2:title,
-        actions:[
-          { label:"Abrir Live", onClick:()=> window.open(`https://www.youtube.com/watch?v=${encodeURIComponent(live.id)}`, "_blank", "noopener,noreferrer") }
-        ]
-      });
-    }else{
-      markOffline("youtube", live.id);
+    }catch(error){
+      titleEl.innerText = live.provider === "kick" ? `KICK: ${live.username}` : `YouTube: ${live.id}`;
+      viewersEl.innerText = "👀 —";
+      setLiveBadge(which, false);
+      console.error(`Erro ao atualizar live ${which}:`, error);
     }
   }
 
@@ -1192,6 +1199,7 @@
       ]);
       statusEl.innerText = "Atualizado ✅";
     }catch(e){
+      console.error(e);
       statusEl.innerText = `Erro: ${e.message}`;
     }
   }
@@ -1205,74 +1213,85 @@
     const list = document.getElementById("favList");
     favStatus.innerText = "Atualizando…";
 
-    const infos = await Promise.all(
-      FAVORITOS.map(async f => {
-        const live = parseLiveInput(f.url);
-        const user = live?.username || f.label;
-        const info = live ? await fetchKickInfo(user) : null;
-        return { user, url:f.url, info };
-      })
-    );
+    try{
+      const infos = await Promise.all(
+        FAVORITOS.map(async f => {
+          try{
+            const live = parseLiveInput(f.url);
+            const user = live?.username || f.label;
+            const info = live ? await fetchKickInfo(user) : null;
+            return { user, url:f.url, info };
+          }catch(error){
+            console.error(`Erro no favorito ${f.label}:`, error);
+            return { user:f.label, url:f.url, info:null };
+          }
+        })
+      );
 
-    list.innerHTML = "";
+      list.innerHTML = "";
 
-    infos.forEach(row => {
-      const info = row.info || {};
-      const title = info.title || "—";
-      const viewers = info.viewers === null || info.viewers === undefined ? null : Number(info.viewers);
-      const isLive = !!info.isLive;
-      const avatar = info.avatar;
+      infos.forEach(row => {
+        const info = row.info || {};
+        const title = info.title || "—";
+        const viewers = info.viewers === null || info.viewers === undefined ? null : Number(info.viewers);
+        const isLive = !!info.isLive;
+        const avatar = info.avatar;
 
-      const el = document.createElement("div");
-      el.className = "favRow";
-      el.innerHTML = `
-        <div class="favLeft">
-          <div class="favAvatar">
-            ${avatar ? `<img src="${avatar}" alt="${escapeHtml(row.user)}">` : `<span>${escapeHtml(avatarFallbackLetter(row.user))}</span>`}
-          </div>
-          <div class="favMid">
-            <div class="favTop">
-              <div class="favUser">${escapeHtml(row.user)}</div>
-              <div class="favLive ${isLive ? "live" : "offline"}">
-                <span class="dot"></span>
-                ${isLive ? "AO VIVO" : "OFFLINE"}
+        const el = document.createElement("div");
+        el.className = "favRow";
+        el.innerHTML = `
+          <div class="favLeft">
+            <div class="favAvatar">
+              ${avatar ? `<img src="${avatar}" alt="${escapeHtml(row.user)}">` : `<span>${escapeHtml(avatarFallbackLetter(row.user))}</span>`}
+            </div>
+            <div class="favMid">
+              <div class="favTop">
+                <div class="favUser">${escapeHtml(row.user)}</div>
+                <div class="favLive ${isLive ? "live" : "offline"}">
+                  <span class="dot"></span>
+                  ${isLive ? "AO VIVO" : "OFFLINE"}
+                </div>
+              </div>
+              <div class="favTitle" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+              <div class="favMeta">
+                <span>${escapeHtml(fmtViewers(viewers))}</span>
               </div>
             </div>
-            <div class="favTitle" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
-            <div class="favMeta">
-              <span>${escapeHtml(fmtViewers(viewers))}</span>
-            </div>
           </div>
-        </div>
-        <div class="favRight">
-          <button class="favOpen" type="button">Abrir</button>
-        </div>
-      `;
+          <div class="favRight">
+            <button class="favOpen" type="button">Abrir</button>
+          </div>
+        `;
 
-      el.querySelector(".favOpen").addEventListener("click", ()=>{
-        const live = parseLiveInput(row.url);
-        if(live) openLiveSplit(live);
+        el.querySelector(".favOpen").addEventListener("click", ()=>{
+          const live = parseLiveInput(row.url);
+          if(live) openLiveSplit(live);
+        });
+
+        list.appendChild(el);
+
+        if(isLive){
+          maybeNotifyOnline({
+            provider:"kick",
+            key:row.user,
+            line1:row.user,
+            line2:title,
+            actions:[
+              { label:"Abrir Live", onClick:()=> window.open(`https://kick.com/${encodeURIComponent(row.user)}`, "_blank", "noopener,noreferrer") },
+              { label:"Abrir Chat", onClick:()=> window.open(`https://kick.com/popout/${encodeURIComponent(row.user)}/chat`, "_blank", "noopener,noreferrer") }
+            ]
+          });
+        }else{
+          markOffline("kick", row.user);
+        }
       });
 
-      list.appendChild(el);
-
-      if(isLive){
-        maybeNotifyOnline({
-          provider:"kick",
-          key:row.user,
-          line1:row.user,
-          line2:title,
-          actions:[
-            { label:"Abrir Live", onClick:()=> window.open(`https://kick.com/${encodeURIComponent(row.user)}`, "_blank", "noopener,noreferrer") },
-            { label:"Abrir Chat", onClick:()=> window.open(`https://kick.com/popout/${encodeURIComponent(row.user)}/chat`, "_blank", "noopener,noreferrer") }
-          ]
-        });
-      }else{
-        markOffline("kick", row.user);
-      }
-    });
-
-    favStatus.innerText = "Atualizado ✅";
+      favStatus.innerText = "Atualizado ✅";
+    }catch(error){
+      console.error("Erro ao atualizar favoritos:", error);
+      list.innerHTML = '<div class="favRow">Não foi possível carregar os favoritos agora.</div>';
+      favStatus.innerText = "Erro ao atualizar";
+    }
   }
 
   const saved = loadSavedLinks();
